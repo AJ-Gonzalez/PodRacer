@@ -5,3 +5,11 @@ DESIGN.md
 LESSONS.md
 STYLE.md
 .handoffs/
+fixtures/raw/
+__pycache__/
+*.pyc
+.venv/
+dist/
+build/
+*.egg-info/
+*.sqlite
