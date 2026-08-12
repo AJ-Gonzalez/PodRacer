@@ -454,6 +454,35 @@ def analog_sunrise() -> Theme:
     )
 
 
+def insane_default() -> Theme:
+    """Insane Default: deep navy 'default' with a hot-pink accent.
+
+    Palette as given by the user. The joke is the framing: navy and
+    slate read as a boring system default until the pink shows up.
+    Hot pink is dark enough for white text (5.04:1); ice blue carries
+    focus, the header runs slate -> pink.
+    """
+    return Theme(
+        name="Insane Default",
+        colors={
+            "deep-navy": "#283149",
+            "slate-indigo": "#404b69",
+            "hot-pink": "#da0463",
+            "ice-blue": "#dbedf3",
+        },
+        window_gradient=("#283149", "#404b69"),
+        accent="#da0463",               # hot pink: white text clears AA
+        accent2="#dbedf3",              # ice blue
+        panel_bg="#404b69",             # slate indigo
+        panel_text="#e6eef3",           # derived ice
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#e6eef3",
+        header_gradient=("#404b69", "#da0463"),
+        header_text="#ffffff",
+    )
+
+
 THEMES: list[Theme] = [
     magenta_daydream(),
     grey_moonlight(),
@@ -463,6 +492,7 @@ THEMES: list[Theme] = [
     lipstick_hyperfemme(),
     butch_cassidy(),
     analog_sunrise(),
+    insane_default(),
 ]
 
 
