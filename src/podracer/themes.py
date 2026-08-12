@@ -395,6 +395,36 @@ def lipstick_hyperfemme() -> Theme:
     )
 
 
+def butch_cassidy() -> Theme:
+    """Butch Cassidy: dark charcoal-plum with a rosewood accent.
+
+    Palette as given by the user. Rosewood is dark enough for white
+    text (6.4:1); pale sage-grey carries focus/links; the header
+    gradient runs dark plum -> rosewood with white text.
+    """
+    return Theme(
+        name="Butch Cassidy",
+        colors={
+            "charcoal": "#37353e",
+            "dark-plum": "#44444e",
+            "rosewood": "#715a5a",
+            "pale-sage": "#d3dad9",
+        },
+        window_gradient=("#37353e", "#44444e"),
+        accent="#715a5a",               # rosewood: white text clears AA
+        accent2="#d3dad9",              # pale sage-grey
+        panel_bg="#44444e",             # dark-plum
+        panel_text="#e8e6e2",           # derived warm light grey
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#e8e6e2",
+        header_gradient=("#44444e", "#715a5a"),
+        header_text="#ffffff",
+        hover_tint="rgba(113, 90, 90, 0.35)",      # rosewood wash
+        alternate_tint="rgba(255, 255, 255, 0.04)",
+    )
+
+
 THEMES: list[Theme] = [
     magenta_daydream(),
     grey_moonlight(),
@@ -402,6 +432,7 @@ THEMES: list[Theme] = [
     bubblegum_haze(),
     hide_and_seek(),
     lipstick_hyperfemme(),
+    butch_cassidy(),
 ]
 
 
