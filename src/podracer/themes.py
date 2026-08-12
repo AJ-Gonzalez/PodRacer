@@ -541,6 +541,58 @@ def aqua() -> Theme:
     )
 
 
+def dark_aqua() -> Theme:
+    """Dark Aqua: the Aqua blues sunk into a deep-navy night."""
+    return Theme(
+        name="Dark Aqua",
+        colors={
+            "midnight": "#152238",
+            "steel": "#2b4a6f",
+            "aqua-blue": "#2e6db4",
+            "cobalt": "#1f4f8f",
+            "sky": "#3b7dd8",
+            "slate": "#1c2733",
+            "ice": "#dbe7f5",
+        },
+        window_gradient=("#152238", "#2b4a6f"),
+        accent="#2e6db4",               # aqua blue: white text clears AA
+        accent2="#3b7dd8",              # sky: focus/borders
+        panel_bg="#1c2733",             # slate
+        panel_text="#dbe7f5",           # ice
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#dbe7f5",
+        header_gradient=("#2e6db4", "#1f4f8f"),
+        header_text="#ffffff",
+        button_to="#1f4f8f",
+    )
+
+
+def just_blues() -> Theme:
+    """Just Blues: periwinkle light with a deep-blue accent (palette
+    e3e8f8 / c0c5cd / 3e588f / 203562, colorhunt.co)."""
+    return Theme(
+        name="Just Blues",
+        colors={
+            "cloud": "#e3e8f8",
+            "fog": "#c0c5cd",
+            "blue": "#3e588f",
+            "navy": "#203562",
+        },
+        window_gradient=("#c0c5cd", "#e3e8f8"),
+        accent="#3e588f",               # blue: white text clears AA
+        accent2="#203562",              # navy: focus/borders
+        panel_bg="#e3e8f8",             # cloud
+        panel_text="#203562",           # navy
+        text_on_accent="#ffffff",
+        status_bg="rgba(255, 255, 255, 0.45)",
+        status_text="#203562",
+        header_gradient=("#3e588f", "#203562"),
+        header_text="#ffffff",
+        button_to="#203562",
+    )
+
+
 THEMES: list[Theme] = [
     magenta_daydream(),
     grey_moonlight(),
@@ -553,6 +605,8 @@ THEMES: list[Theme] = [
     insane_default(),
     frutiger_aero(),
     aqua(),
+    dark_aqua(),
+    just_blues(),
 ]
 
 
