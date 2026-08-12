@@ -13,3 +13,6 @@ dist/
 build/
 *.egg-info/
 *.sqlite
+/podracer
+/src/podracer.egg-info/
+/src/podracer_db.egg-info/

@@ -8,13 +8,18 @@ Targets the classic iTunesDB device family first: iPod nano 3G (the original tar
 
 ## Status
 
-Experimental. The iTunesDB codec (parse + write, verified against a real nano 3G) is done — see ROADMAP.md. Sync core and UI are next.
+Experimental, but the core is proven on real hardware: the DB codec, sync pipeline, and eject flow all verified against a nano 3G. The two-pane UI skeleton works; theming and polish are in progress — see ROADMAP.md.
+
+## Run it
+
+- From the repo: `scripts/build_onefile.sh` produces `./podracer` (one file, ~90 MB). Symlink it into your PATH: `ln -s "$PWD/podracer" ~/.local/bin/podracer`. Launch from a terminal or double-click.
+- From source: `PYTHONPATH=src python3 -m podracer.main`
 
 ## Development
 
-- Python 3.13, PySide6 (Qt6) — UI
+- Python 3.13, PySide6 (Qt6) — UI (packages live under `src/`)
 - `podracer_db` — pure-stdlib iTunesDB codec
-- ffmpeg — transcoding to AAC
+- ffmpeg — tagging + transcoding to AAC
 - `scripts/extract_fixtures.py` — pull the DB + sample tracks from a real iPod for tests
-- Tests: `python3 -m unittest discover -s tests -v` (stdlib only)
+- Tests: `python3 -m unittest discover -s tests -t . -v` (stdlib only)
 
