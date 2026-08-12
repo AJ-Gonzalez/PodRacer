@@ -28,12 +28,14 @@ from PySide6.QtCore import (
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QDialog,
     QFileDialog,
     QFileSystemModel,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
+    QListWidget,
     QMainWindow,
     QMenu,
     QMessageBox,
@@ -196,6 +198,32 @@ class BackupWorker(QThread):
         self.progressMade.emit(done, total)
 
 
+class CheckWorker(QThread):
+    """Scans the device tree for untracked files (hidden duplicates)."""
+
+    fileStarted = Signal(str)
+    progressMade = Signal(int, int)
+    finishedAll = Signal(object)   # OrphanScan
+
+    def __init__(self, session: SyncSession) -> None:
+        super().__init__()
+        self.session = session
+        self.cancelled = False
+
+    def run(self) -> None:
+        from .orphans import scan_orphans
+
+        scan = scan_orphans(
+            self.session.lib, self.session.music_dir,
+            progress=self._on_progress,
+            cancel=lambda: self.cancelled,
+        )
+        self.finishedAll.emit(scan)
+
+    def _on_progress(self, done: int, total: int) -> None:
+        self.progressMade.emit(done, total)
+
+
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -203,6 +231,7 @@ class MainWindow(QMainWindow):
         self._device_key: str | None = None
         self._worker: AddWorker | None = None
         self._backup_worker: BackupWorker | None = None
+        self._check_worker: CheckWorker | None = None
         self._last_mount_attempt = 0.0
         # True while the in-memory library differs from what is on the
         # device (adds/deletes since the last Sync / Sync & Eject).
@@ -341,6 +370,14 @@ class MainWindow(QMainWindow):
             "Copy the music off the iPod into a folder, "
             "organized by artist and album."
         )
+        self.check_button = QPushButton("Check duplicates…", self)
+        self.check_button.clicked.connect(self._check_hidden_duplicates)
+        self.check_button.setEnabled(False)
+        self.check_button.setToolTip(
+            "Find files on the iPod that aren't in the library. "
+            "Hidden duplicates (same song twice) can be removed to "
+            "free space."
+        )
         self.remove_button = QPushButton("Remove", self)
         self.remove_button.clicked.connect(self._remove_selected)
         self.remove_button.setEnabled(False)
@@ -381,6 +418,7 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.sync_button)
         self.statusBar().addPermanentWidget(self.eject_button)
         self.statusBar().addPermanentWidget(self.backup_button)
+        self.statusBar().addPermanentWidget(self.check_button)
         self.statusBar().addPermanentWidget(self.theme_button)
         self.statusBar().addPermanentWidget(self.font_button)
         self.statusBar().addPermanentWidget(self.size_down)
@@ -543,6 +581,7 @@ class MainWindow(QMainWindow):
             self.eject_button.setEnabled(True)
             self.sync_button.setEnabled(True)
             self.backup_button.setEnabled(True)
+            self.check_button.setEnabled(True)
             self.setWindowTitle(f"PodRacer — {self.session.device_name}")
         else:
             self.device_label.setText("No iPod — click to find")
@@ -550,6 +589,7 @@ class MainWindow(QMainWindow):
             self.eject_button.setEnabled(False)
             self.sync_button.setEnabled(False)
             self.backup_button.setEnabled(False)
+            self.check_button.setEnabled(False)
             self.setWindowTitle("PodRacer")
 
     # -- filesystem pane -------------------------------------------------
@@ -608,10 +648,12 @@ class MainWindow(QMainWindow):
     # -- add / remove ----------------------------------------------------
 
     def _transfer_running(self) -> bool:
-        """An add or backup worker is mid-flight."""
+        """An add, backup, or check worker is mid-flight."""
         if self._worker is not None and self._worker.isRunning():
             return True
         if self._backup_worker is not None and self._backup_worker.isRunning():
+            return True
+        if self._check_worker is not None and self._check_worker.isRunning():
             return True
         return False
 
@@ -643,6 +685,7 @@ class MainWindow(QMainWindow):
         self.eject_button.setEnabled(False)
         self.sync_button.setEnabled(False)
         self.backup_button.setEnabled(False)
+        self.check_button.setEnabled(False)
         self._worker.start()
 
     def _on_file_started(self, path: str) -> None:
@@ -674,6 +717,7 @@ class MainWindow(QMainWindow):
         self.eject_button.setEnabled(self.session is not None)
         self.sync_button.setEnabled(self.session is not None)
         self.backup_button.setEnabled(self.session is not None)
+        self.check_button.setEnabled(self.session is not None)
         self.tracks_model.set_session(self.session)
         self._refresh_after_change()
         self._worker = None
@@ -683,6 +727,8 @@ class MainWindow(QMainWindow):
             self._worker.cancelled = True
         if self._backup_worker is not None:
             self._backup_worker.cancelled = True
+        if self._check_worker is not None:
+            self._check_worker.cancelled = True
         self._status("Finishing the current file…")
 
 
@@ -769,6 +815,7 @@ class MainWindow(QMainWindow):
         self.eject_button.setEnabled(False)
         self.sync_button.setEnabled(False)
         self.backup_button.setEnabled(False)
+        self.check_button.setEnabled(False)
         self._status(f"Backing up to {dest}…")
         self._backup_worker.start()
 
@@ -784,6 +831,7 @@ class MainWindow(QMainWindow):
         self.eject_button.setEnabled(self.session is not None)
         self.sync_button.setEnabled(self.session is not None)
         self.backup_button.setEnabled(self.session is not None)
+        self.check_button.setEnabled(self.session is not None)
         self._backup_worker = None
         parts = [f"{result.copied} songs"]
         if result.orphans_copied:
@@ -799,6 +847,86 @@ class MainWindow(QMainWindow):
         if result.errors:
             parts.append(f"{len(result.errors)} errors")
         self._status("Backup: " + ", ".join(parts) + ".")
+
+    def _check_hidden_duplicates(self) -> None:
+        if self.session is None or self._transfer_running():
+            return
+        self._check_worker = CheckWorker(self.session)
+        self._check_worker.progressMade.connect(self._on_check_progress)
+        self._check_worker.finishedAll.connect(self._on_check_finished)
+        self.progress.setRange(0, 0)
+        self.progress.show()
+        self.cancel_button.show()
+        self.eject_button.setEnabled(False)
+        self.sync_button.setEnabled(False)
+        self.backup_button.setEnabled(False)
+        self.check_button.setEnabled(False)
+        self._status("Scanning the iPod for hidden files…")
+        self._check_worker.start()
+
+    def _on_check_progress(self, done: int, total: int) -> None:
+        if total:
+            self.progress.setRange(0, total)
+            self.progress.setValue(done)
+
+    def _on_check_finished(self, scan) -> None:
+        self.progress.hide()
+        self.cancel_button.hide()
+        self.eject_button.setEnabled(self.session is not None)
+        self.sync_button.setEnabled(self.session is not None)
+        self.backup_button.setEnabled(self.session is not None)
+        self.check_button.setEnabled(self.session is not None)
+        self._check_worker = None
+        if scan.errors:
+            self._status("Scan problem: " + "; ".join(scan.errors[:2]))
+            return
+        if not scan.duplicates and not scan.unique:
+            self._status("No hidden files — everything is in the library.")
+            return
+        dup_mb = sum(d.size for d in scan.duplicates) / 2**20
+        uniq_mb = sum(u.size for u in scan.unique) / 2**20
+        box = QDialog(self)
+        box.setWindowTitle("Hidden duplicates")
+        layout = QVBoxLayout(box)
+        layout.addWidget(QLabel(
+            f"{len(scan.duplicates)} hidden duplicate(s) ({dup_mb:.1f} MiB) — "
+            "copies of songs already in your library."
+        ))
+        if scan.duplicates:
+            listing = QListWidget()
+            for d in scan.duplicates:
+                listing.addItem(
+                    f"{d.path.parent.name}/{d.path.name}  ({d.size / 2**20:.1f} MiB)"
+                    f"  →  \"{d.duplicate_of}\""
+                )
+            layout.addWidget(listing)
+        if scan.unique:
+            layout.addWidget(QLabel(
+                f"{len(scan.unique)} other untracked file(s) ({uniq_mb:.1f} MiB) "
+                "are not duplicates — left alone."
+            ))
+        buttons = QHBoxLayout()
+        remove_btn = QPushButton(f"Remove {len(scan.duplicates)} duplicates")
+        remove_btn.setEnabled(bool(scan.duplicates))
+        remove_btn.clicked.connect(lambda: self._remove_hidden_duplicates(box, scan))
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(box.accept)
+        buttons.addWidget(remove_btn)
+        buttons.addWidget(close_btn)
+        layout.addLayout(buttons)
+        box.exec()
+
+    def _remove_hidden_duplicates(self, box, scan) -> None:
+        from .orphans import delete_orphans
+
+        deleted, freed, errors = delete_orphans(scan.duplicates)
+        box.accept()
+        self._status(
+            f"Removed {deleted} hidden duplicate(s), freed {freed / 2**20:.1f} MiB."
+        )
+        if errors:
+            self._status("Removal problem: " + "; ".join(errors[:2]))
+        self._refresh_after_change()
 
     # -- helpers -----------------------------------------------------------
 
