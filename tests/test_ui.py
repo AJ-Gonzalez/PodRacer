@@ -94,5 +94,87 @@ class LeftPaneTests(_QtCase):
         win.close()
 
 
+class StatusBarTests(_QtCase):
+    def test_status_uses_label_not_showmessage(self):
+        # Qt 6.11 paints QStatusBar.showMessage at the far-left edge,
+        # ON TOP of the normal widgets — the overlap seen when the iPod
+        # connects ("Mounted HYPERPINK." over the device/track buttons).
+        # Status text must live in a real, layout-participating label.
+        win = MainWindow()
+        win._status("Mounted HYPERPINK.")
+        self.assertEqual(win.status_label.text(), "Mounted HYPERPINK.")
+        self.assertEqual(win.statusBar().currentMessage(), "")
+        win.show()
+        self.app.processEvents()
+        # The label sits between the left buttons and the permanent
+        # widgets, never over them.
+        self.assertGreater(win.status_label.geometry().x(),
+                           win.device_label.geometry().right())
+        self.assertLess(win.status_label.geometry().x(),
+                        win.remove_button.geometry().x())
+        win.close()
+
+    def test_status_auto_clears_after_timeout(self):
+        win = MainWindow()
+        win._status("Transient")
+        self.assertEqual(win.status_label.text(), "Transient")
+        win._status_timer.timeout.emit()
+        self.assertEqual(win.status_label.text(), "")
+        win.close()
+
+
+class QuitGuardTests(_QtCase):
+    def test_clean_session_closes(self):
+        win = MainWindow()
+        self.assertEqual(win._quit_action(), "close")
+        win.close()
+
+    def test_dirty_requires_decision(self):
+        win = MainWindow()
+        win.session = object()  # a connected session is required
+        win._dirty = True
+        self.assertEqual(win._quit_action(), "unsynced")
+        # Reset before close: closeEvent on a dirty window opens the
+        # modal quit-guard dialog, which would block the test.
+        win._dirty = False
+        win.session = None
+        win.close()
+
+    def test_running_transfer_blocks_close(self):
+        win = MainWindow()
+        class _FakeWorker:
+            def isRunning(self) -> bool:
+                return True
+        win._worker = _FakeWorker()
+        self.assertEqual(win._quit_action(), "transfer")
+        win._worker = None
+        win.close()
+
+    def test_sync_clears_dirty_and_writes_db(self):
+        import tempfile
+        from pathlib import Path
+
+        from podracer import device
+        from podracer.sync import SyncSession
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ipod_dir = Path(tmp) / "HYPERPINK"
+            (ipod_dir / "iPod_Control" / "iTunes").mkdir(parents=True)
+            (ipod_dir / "iPod_Control" / "Music").mkdir(parents=True)
+            ipod = device.IPod(
+                mountpoint=ipod_dir, label="HYPERPINK", block_device="sdb1",
+                guid="000A27001BB9E492", serial="YM825HUD13F",
+                family_id=12, db_version=3,
+            )
+            win = MainWindow()
+            win.session = SyncSession(ipod, sidecar=Path(tmp) / "lib.sqlite")
+            win._dirty = True
+            win._sync()
+            self.assertFalse(win._dirty)
+            self.assertTrue((ipod_dir / "iPod_Control/iTunes/iTunesDB").is_file())
+            win.session.close()
+            win.close()
+
+
 if __name__ == "__main__":
     unittest.main()

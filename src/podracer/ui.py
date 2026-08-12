@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QFileSystemModel,
     QHBoxLayout,
     QHeaderView,
+    QLabel,
     QLineEdit,
     QMainWindow,
     QMenu,
@@ -168,6 +169,9 @@ class MainWindow(QMainWindow):
         self._device_key: str | None = None
         self._worker: AddWorker | None = None
         self._last_mount_attempt = 0.0
+        # True while the in-memory library differs from what is on the
+        # device (adds/deletes since the last Sync / Sync & Eject).
+        self._dirty = False
 
         # -- left pane: filesystem -------------------------------------
         self.fs_model = QFileSystemModel(self)
@@ -307,6 +311,16 @@ class MainWindow(QMainWindow):
         self.size_up.clicked.connect(lambda: self._bump_font(1))
         self.statusBar().addWidget(self.device_label)
         self.statusBar().addWidget(self.track_count)
+        # Status messages go in a real label, never QStatusBar.showMessage:
+        # Qt 6.11 paints showMessage text at the far-left edge, ON TOP of
+        # the normal widgets, so "Mounted HYPERPINK." overlapped the
+        # device/track buttons. A stretch-1 label lays out properly.
+        self.status_label = QLabel("", self)
+        self.statusBar().addWidget(self.status_label, 1)
+        self._status_timer = QTimer(self)
+        self._status_timer.setSingleShot(True)
+        self._status_timer.setInterval(8000)
+        self._status_timer.timeout.connect(self.status_label.clear)
         self.statusBar().addPermanentWidget(self.progress)
         self.statusBar().addPermanentWidget(self.cancel_button)
         self.statusBar().addPermanentWidget(self.remove_button)
@@ -448,6 +462,8 @@ class MainWindow(QMainWindow):
         if self.session is not None:
             self.session.close()
             self.session = None
+        # A fresh session starts from what is on the device — clean.
+        self._dirty = False
         if ipod is not None:
             try:
                 self.session = SyncSession(ipod)
@@ -548,6 +564,8 @@ class MainWindow(QMainWindow):
         if errors:
             parts.append(f"{errors} failed")
         self._status(", ".join(parts) + ".")
+        if added:
+            self._dirty = True
         self.progress.hide()
         self.cancel_button.hide()
         self.eject_button.setEnabled(self.session is not None)
@@ -579,6 +597,7 @@ class MainWindow(QMainWindow):
             return
         for track in tracks:
             self.session.remove(track)
+        self._dirty = True
         self.tracks_model.set_session(self.session)
         self._refresh_after_change()
 
@@ -611,6 +630,7 @@ class MainWindow(QMainWindow):
         except device.DeviceError as exc:
             self._status(f"Sync problem: {exc}")
             return
+        self._dirty = False
         self._status("Synced. iPod stays mounted.")
 
     def _eject(self) -> None:
@@ -622,9 +642,63 @@ class MainWindow(QMainWindow):
         except device.DeviceError as exc:
             self._status(f"Eject problem: {exc}")
             return
+        self._dirty = False
         self._status("Written. Safe to unplug.")
 
     # -- helpers -----------------------------------------------------------
 
     def _status(self, text: str) -> None:
-        self.statusBar().showMessage(text, 8000)
+        self.status_label.setText(text)
+        # Auto-clear like showMessage's timeout, so transient messages
+        # ("Adding 3/3…") do not linger forever.
+        self._status_timer.start()
+
+    def _quit_action(self) -> str:
+        """What closing the window should do: 'close', 'cancel', or
+        'sync-then-close'. Kept dialog-free so it is unit-testable."""
+        if self._worker is not None and self._worker.isRunning():
+            return "transfer"
+        if self._dirty and self.session is not None:
+            return "unsynced"
+        return "close"
+
+    def closeEvent(self, event) -> None:  # noqa: N802
+        action = self._quit_action()
+        if action == "transfer":
+            QMessageBox.information(
+                self, "Transfer in progress",
+                "A transfer is still running. Cancel it first, then close.",
+            )
+            event.ignore()
+            return
+        if action == "unsynced":
+            box = QMessageBox(self)
+            box.setWindowTitle("Unsynced changes")
+            box.setText("Changes have not been written to the iPod yet.")
+            box.setInformativeText(
+                "Sync writes them now. Quitting without syncing loses them."
+            )
+            sync_quit = box.addButton(
+                "Sync & Quit", QMessageBox.ButtonRole.AcceptRole
+            )
+            quit_anyway = box.addButton(
+                "Quit anyway", QMessageBox.ButtonRole.DestructiveRole
+            )
+            cancel = box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+            box.setDefaultButton(cancel)
+            box.exec()
+            clicked = box.clickedButton()
+            if clicked is cancel:
+                event.ignore()
+                return
+            if clicked is sync_quit:
+                try:
+                    self.session.sync()
+                except device.DeviceError as exc:
+                    self._status(f"Sync problem: {exc}")
+                    event.ignore()
+                    return
+                self._dirty = False
+            event.accept()
+            return
+        event.accept()

@@ -1,14 +1,12 @@
 # PodRacer
 
-Transfer music to an iPod from Linux — no iTunes. Plug in the iPod, open PodRacer, drag music over. That is the whole manual.
+Transfer music to an iPod from Linux without iTunes. 
+
+**Plug in the iPod, open PodRacer, drag music over.**
 
 Midnight-commander-style two-pane UI: browse your music folder on the left, see what is on the iPod on the right. Manual sync, automatic duplicate avoidance, auto-transcode via ffmpeg.
 
 Targets the classic iTunesDB device family first: iPod nano 3G (the original target) plus nano 1-3G and classic 1-5.5G.
-
-## Status
-
-Experimental, but the core is proven on real hardware: the DB codec, sync pipeline, and eject flow all verified against a nano 3G. The two-pane UI skeleton works; theming and polish are in progress — see ROADMAP.md.
 
 ## Run it
 
@@ -22,4 +20,5 @@ Experimental, but the core is proven on real hardware: the DB codec, sync pipeli
 - ffmpeg — tagging + transcoding to AAC
 - `scripts/extract_fixtures.py` — pull the DB + sample tracks from a real iPod for tests
 - Tests: `python3 -m unittest discover -s tests -t . -v` (stdlib only)
+
 
