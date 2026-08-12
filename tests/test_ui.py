@@ -5,6 +5,7 @@ assignments never fire, so the drop/Delete wiring must live in a real
 subclass with signals.
 """
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -174,6 +175,61 @@ class QuitGuardTests(_QtCase):
             self.assertTrue((ipod_dir / "iPod_Control/iTunes/iTunesDB").is_file())
             win.session.close()
             win.close()
+
+
+class MusicHomeTests(_QtCase):
+    def setUp(self):
+        # Isolate QSettings so tests never touch the real config.
+        self._tmp = tempfile.TemporaryDirectory()
+        self._old_xdg = os.environ.get("XDG_CONFIG_HOME")
+        os.environ["XDG_CONFIG_HOME"] = self._tmp.name
+
+    def tearDown(self):
+        if self._old_xdg is None:
+            os.environ.pop("XDG_CONFIG_HOME", None)
+        else:
+            os.environ["XDG_CONFIG_HOME"] = self._old_xdg
+        self._tmp.cleanup()
+        super().tearDown()
+
+    def test_set_music_home_persists_and_navigates(self):
+        with tempfile.TemporaryDirectory() as folder:
+            win = MainWindow()
+            win._set_music_home(Path(folder))
+            self.assertEqual(win.settings.value("fs/home", "", str), folder)
+            self.assertEqual(Path(win.fs_model.filePath(win.fs_view.rootIndex())),
+                             Path(folder))
+            win.close()
+
+    def test_startup_uses_saved_music_home(self):
+        with tempfile.TemporaryDirectory() as folder:
+            win = MainWindow()
+            win._set_music_home(Path(folder))
+            win.close()
+            win2 = MainWindow()
+            self.assertEqual(Path(win2.fs_model.filePath(win2.fs_view.rootIndex())),
+                             Path(folder))
+            win2.close()
+
+    def test_clear_music_home_returns_to_home(self):
+        with tempfile.TemporaryDirectory() as folder:
+            win = MainWindow()
+            win._set_music_home(Path(folder))
+            win._clear_music_home()
+            self.assertEqual(win.settings.value("fs/home", "", str), "")
+            self.assertEqual(Path(win.fs_model.filePath(win.fs_view.rootIndex())),
+                             Path.home())
+            win.close()
+
+    def test_stale_saved_home_falls_back(self):
+        # A saved folder that no longer exists must not break startup.
+        gone = Path(self._tmp.name) / "does-not-exist"
+        win = MainWindow()
+        win.settings.setValue("fs/home", str(gone))
+        win.close()
+        win2 = MainWindow()
+        self.assertEqual(win2._music_home(), str(Path.home()))
+        win2.close()
 
 
 if __name__ == "__main__":

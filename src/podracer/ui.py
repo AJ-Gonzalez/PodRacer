@@ -45,7 +45,7 @@ from PySide6.QtWidgets import (
 )
 from . import device
 from .fonts import FONT_OPTIONS, MAX_SIZE, MIN_SIZE, apply_font, register_fonts
-from .pipeline import AddResult, collect_audio
+from .pipeline import AUDIO_EXTENSIONS, AddResult, collect_audio
 from .sync import SyncSession
 from .themes import THEMES, apply_theme
 from podracer_db.model import Track
@@ -172,13 +172,17 @@ class MainWindow(QMainWindow):
         # True while the in-memory library differs from what is on the
         # device (adds/deletes since the last Sync / Sync & Eject).
         self._dirty = False
+        self.settings = QSettings("PodRacer", "PodRacer")
 
         # -- left pane: filesystem -------------------------------------
+        # The app starts on the saved music home (right-click a folder
+        # to set it), falling back to the user's home directory.
+        start = self._music_home()
         self.fs_model = QFileSystemModel(self)
-        self.fs_model.setRootPath(str(Path.home()))
+        self.fs_model.setRootPath(start)
         self.fs_view = QTreeView(self)
         self.fs_view.setModel(self.fs_model)
-        self.fs_view.setRootIndex(self.fs_model.index(str(Path.home())))
+        self.fs_view.setRootIndex(self.fs_model.index(start))
         self.fs_view.setDragEnabled(True)
         self.fs_view.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
         self.fs_view.setHeaderHidden(False)
@@ -190,9 +194,17 @@ class MainWindow(QMainWindow):
         self.fs_view.setColumnWidth(1, 80)
         self.fs_view.setColumnWidth(2, 90)
         self.fs_view.setColumnWidth(3, 130)
+        # Right-click: send a folder to the iPod, or pin it as the
+        # folder the app opens on (product tenet — no hunting for it).
+        self.fs_view.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.fs_view.customContextMenuRequested.connect(
+            self._show_fs_context_menu
+        )
 
         self.path_bar = QLineEdit(self)
-        self.path_bar.setText(str(Path.home()))
+        self.path_bar.setText(start)
         self.path_bar.returnPressed.connect(self._goto_path)
         self.up_button = QPushButton("Up", self)
         self.up_button.clicked.connect(self._go_up)
@@ -399,7 +411,6 @@ class MainWindow(QMainWindow):
         self._status(f"Text: {label}, {self._font_size} pt")
 
     def _load_settings(self) -> None:
-        self.settings = QSettings("PodRacer", "PodRacer")
         theme_name = self.settings.value("theme/name", THEMES[0].name, str)
         try:
             from .themes import theme_by_name
@@ -498,6 +509,11 @@ class MainWindow(QMainWindow):
 
     # -- filesystem pane -------------------------------------------------
 
+    def _music_home(self) -> str:
+        """The folder the app opens on: the saved default, else Home."""
+        start = self.settings.value("fs/home", str(Path.home()), str)
+        return start if Path(start).is_dir() else str(Path.home())
+
     def _goto_path(self) -> None:
         path = self.path_bar.text().strip()
         if Path(path).is_dir():
@@ -510,6 +526,39 @@ class MainWindow(QMainWindow):
         if parent.isValid():
             self.fs_view.setRootIndex(parent)
             self.path_bar.setText(self.fs_model.filePath(parent))
+
+    def _show_fs_context_menu(self, pos) -> None:
+        index = self.fs_view.indexAt(pos)
+        if not index.isValid():
+            return
+        path = Path(self.fs_model.filePath(index))
+        menu = QMenu(self)
+        is_music = path.is_dir() or path.suffix.lower() in AUDIO_EXTENSIONS
+        send = menu.addAction("Send to iPod")
+        send.setEnabled(is_music)
+        send.setToolTip("Add every music file in this folder to the iPod.")
+        send.triggered.connect(lambda: self._files_dropped([str(path)]))
+        if path.is_dir():
+            set_home = menu.addAction("Set as default music folder")
+            set_home.setToolTip("The app opens on this folder next time.")
+            set_home.triggered.connect(lambda: self._set_music_home(path))
+            if self.settings.value("fs/home", "", str):
+                reset = menu.addAction("Clear default — start at Home")
+                reset.triggered.connect(self._clear_music_home)
+        menu.exec(self.fs_view.viewport().mapToGlobal(pos))
+
+    def _set_music_home(self, path: Path) -> None:
+        self.settings.setValue("fs/home", str(path))
+        self.fs_view.setRootIndex(self.fs_model.index(str(path)))
+        self.path_bar.setText(str(path))
+        self._status(f"Default music folder: {path}")
+
+    def _clear_music_home(self) -> None:
+        self.settings.remove("fs/home")
+        home = self._music_home()
+        self.fs_view.setRootIndex(self.fs_model.index(home))
+        self.path_bar.setText(home)
+        self._status("Default cleared — the app starts at Home.")
 
     # -- add / remove ----------------------------------------------------
 
