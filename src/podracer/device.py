@@ -140,6 +140,24 @@ def current_ipod() -> IPod | None:
     return None
 
 
+def auto_mount() -> IPod | None:
+    """The plugged-in iPod, mounted if needed.
+
+    Returns None when no Apple drive is present; mounts the first
+    Apple partition via udisksctl when it is plugged in but unmounted.
+    Raises DeviceError when the mount fails.
+    """
+    partitions = _apple_partitions()
+    if not partitions:
+        return None
+    labels = {label for _device, label in partitions}
+    for ipod in mounted_ipods():
+        if ipod.label and ipod.label in labels:
+            _fill_identity(ipod)
+            return ipod
+    return mount_ipod()
+
+
 def mount_ipod() -> IPod:
     """Mount the Apple partition via udisksctl and return the IPod."""
     partitions = _apple_partitions()

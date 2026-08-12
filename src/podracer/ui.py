@@ -11,8 +11,8 @@ ships a stylesheet hook today.
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
-
 from PySide6.QtCore import (
     QAbstractTableModel,
     QModelIndex,
@@ -165,9 +165,7 @@ class MainWindow(QMainWindow):
         self.session: SyncSession | None = None
         self._device_key: str | None = None
         self._worker: AddWorker | None = None
-
-        self.setWindowTitle("PodRacer")
-        self.resize(1100, 640)
+        self._last_mount_attempt = 0.0
 
         # -- left pane: filesystem -------------------------------------
         self.fs_model = QFileSystemModel(self)
@@ -242,8 +240,8 @@ class MainWindow(QMainWindow):
         # addWidget() returns None in PySide6: build the widgets first.
         self.device_label = QPushButton("No iPod", self)
         self.device_label.setFlat(True)
-        self.device_label.setEnabled(False)
-        self.device_label.setToolTip("Plug in the iPod and it shows up here.")
+        self.device_label.setToolTip("Click to find and mount the iPod.")
+        self.device_label.clicked.connect(self._find_ipod)
         self.track_count = QPushButton("", self)
         self.track_count.setFlat(True)
         self.track_count.setEnabled(False)
@@ -397,10 +395,16 @@ class MainWindow(QMainWindow):
     # -- device ---------------------------------------------------------
 
     def _poll_device(self) -> None:
+        now = time.monotonic()
+        # Cooldown after a failed mount: do not hammer udisksctl.
+        if self._device_key is None and now - self._last_mount_attempt < 15:
+            return
         try:
-            ipod = device.current_ipod()
-        except device.DeviceError:
+            ipod = device.auto_mount()
+        except device.DeviceError as exc:
             ipod = None
+            self._last_mount_attempt = now
+            self._status(f"Could not mount the iPod: {exc}")
         key = str(ipod.mountpoint) if ipod else None
         if key == self._device_key:
             return
@@ -411,10 +415,17 @@ class MainWindow(QMainWindow):
         if ipod is not None:
             try:
                 self.session = SyncSession(ipod)
+                self._status(f"Mounted {ipod.label or ipod.mountpoint.name}.")
             except Exception as exc:  # corrupt DB etc.
                 self._status(f"Could not read the iPod: {exc}")
                 self.session = None
         self._refresh_after_change()
+
+    def _find_ipod(self) -> None:
+        """Immediate scan + mount (the device label is the button)."""
+        self._last_mount_attempt = 0.0
+        self._status("Looking for the iPod…")
+        self._poll_device()
 
     def _refresh_after_change(self) -> None:
         self.tracks_model.set_session(self.session)
@@ -426,7 +437,7 @@ class MainWindow(QMainWindow):
             self.eject_button.setEnabled(True)
             self.setWindowTitle(f"PodRacer — {self.session.device_name}")
         else:
-            self.device_label.setText("No iPod")
+            self.device_label.setText("No iPod — click to find")
             self.track_count.setText("")
             self.eject_button.setEnabled(False)
             self.setWindowTitle("PodRacer")

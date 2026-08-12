@@ -114,6 +114,34 @@ class DeviceTests(unittest.TestCase):
                 self.assertEqual(ipod.block_device, "sdb1")
                 self.assertEqual(ipod.mountpoint, root / "HYPERPINK")
 
+    def test_auto_mount_no_drive_returns_none(self):
+        with mock.patch.object(device, "_apple_partitions", return_value=[]), \
+             mock.patch.object(device, "mount_ipod") as mount:
+            self.assertIsNone(device.auto_mount())
+            mount.assert_not_called()
+
+    def test_auto_mount_mounted_drive_not_remounted(self):
+        ipod = device.IPod(mountpoint=Path("/run/media/u/HYPERPINK"),
+                           label="HYPERPINK")
+        with mock.patch.object(device, "_apple_partitions",
+                               return_value=[("sdb1", "HYPERPINK")]), \
+             mock.patch.object(device, "mounted_ipods", return_value=[ipod]), \
+             mock.patch.object(device, "mount_ipod") as mount:
+            found = device.auto_mount()
+            self.assertIs(found, ipod)
+            mount.assert_not_called()
+
+    def test_auto_mount_mounts_unmounted_drive(self):
+        mounted = device.IPod(mountpoint=Path("/run/media/u/HYPERPINK"),
+                              label="HYPERPINK")
+        with mock.patch.object(device, "_apple_partitions",
+                               return_value=[("sdb1", "HYPERPINK")]), \
+             mock.patch.object(device, "mounted_ipods", return_value=[]), \
+             mock.patch.object(device, "mount_ipod", return_value=mounted) as mount:
+            found = device.auto_mount()
+            self.assertIs(found, mounted)
+            mount.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()
