@@ -121,6 +121,17 @@ def main() -> int:
         )
         print(f"copied sample {dest.name} ({dest.stat().st_size} bytes)")
 
+    # Device identity plist (FireWireGUID, serial, family id): the hash58
+    # key comes from here, so the codec tests need a real copy.
+    sysinfo = ipod / "iPod_Control" / "Device" / "SysInfoExtended"
+    if sysinfo.is_file():
+        dest = args.out / "SysInfoExtended"
+        shutil.copy2(sysinfo, dest)
+        manifest["files"].append(
+            {"path": dest.name, "source": str(sysinfo.relative_to(ipod)), "size": dest.stat().st_size, "sha256": sha256(dest)}
+        )
+        print(f"copied {dest.name} ({dest.stat().st_size} bytes)")
+
     (args.out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"manifest: {args.out / 'manifest.json'}")
     print(f"Took {time.monotonic() - start:.1f}s")
