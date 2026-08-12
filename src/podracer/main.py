@@ -58,7 +58,8 @@ def main() -> int:
         return 1
 
     window = MainWindow()
-    window.show()
+    # The two-pane layout is unusable when small; start maximized.
+    window.showMaximized()
 
     if "--smoke" in app.arguments():
         QTimer.singleShot(300, app.quit)
