@@ -308,7 +308,41 @@ def zen_garden() -> Theme:
     )
 
 
-THEMES: list[Theme] = [magenta_daydream(), grey_moonlight(), zen_garden()]
+def bubblegum_haze() -> Theme:
+    """Bubblegum Haze: coral -> mint pastel sweep, lime panels.
+
+    Palette as given by the user. Like Zen Garden this is a light
+    pastel set: the accent carries dark text (white on coral fails
+    AA), the focus color is a derived deeper coral so borders stay
+    visible on the pale lime panels.
+    """
+    return Theme(
+        name="Bubblegum Haze",
+        colors={
+            "coral": "#ff9d9d",
+            "peach": "#ffc5aa",
+            "lime": "#eef8cd",
+            "mint": "#bbf1d2",
+        },
+        window_gradient=("#ff9d9d", "#bbf1d2"),
+        accent="#ff9d9d",               # coral: dark text clears AA
+        accent2="#cc7e7e",              # derived deeper coral for focus
+        panel_bg="#eef8cd",             # pale lime
+        panel_text="#383d2e",           # derived dark-warm olive
+        text_on_accent="#40262a",       # derived dark-warm
+        status_bg="rgba(255, 255, 255, 0.35)",
+        status_text="#40262a",
+        header_gradient=("#ffc5aa", "#bbf1d2"),
+        header_text="#40262a",
+    )
+
+
+THEMES: list[Theme] = [
+    magenta_daydream(),
+    grey_moonlight(),
+    zen_garden(),
+    bubblegum_haze(),
+]
 
 
 def apply_theme(app, theme: Theme) -> None:
