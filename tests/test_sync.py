@@ -9,7 +9,7 @@ from podracer import device, pipeline
 from podracer.sync import SyncSession
 from podracer_db import parse_db
 
-GUID = "000A27001BB9E492"
+GUID = "0011223344556677"
 
 
 def _fake_ipod(tmp: Path, seeded: bool = True) -> device.IPod:

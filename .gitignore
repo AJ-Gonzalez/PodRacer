@@ -16,3 +16,4 @@ build/
 /podracer
 /src/podracer.egg-info/
 /src/podracer_db.egg-info/
+tests/.fixture_guid

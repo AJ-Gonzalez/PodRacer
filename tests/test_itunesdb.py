@@ -19,7 +19,12 @@ RAW = Path(
     )
 )
 
-GUID = "000A27001BB9E492"  # FireWireGUID of the HYPERPINK nano
+# The fixture-gated hash test needs the real device's FireWire GUID as
+# hash58 key material; that GUID is hardware-identifying, so it lives in
+# a gitignored local file (tests/.fixture_guid) instead of the repo.
+_GUID_FILE = Path(__file__).resolve().parent / ".fixture_guid"
+GUID = (_GUID_FILE.read_text().splitlines()[0].strip()
+        if _GUID_FILE.is_file() else "0011223344556677")
 
 
 def _fixture_bytes() -> bytes | None:

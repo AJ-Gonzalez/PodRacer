@@ -105,7 +105,7 @@ def compute_hash58(db: bytes, firewire_guid: str) -> bytes:
     """The 20 bytes that belong in the mhbd hash58 slot.
 
     @firewire_guid: the device's FireWireGUID, 16 hex chars
-    (e.g. '000A27001BB9E492').
+    (e.g. '0011223344556677').
     """
     fwid = bytes.fromhex(firewire_guid)
     if len(fwid) != 8:

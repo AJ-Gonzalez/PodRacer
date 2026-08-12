@@ -17,7 +17,7 @@ Targets the classic iTunesDB device family first: iPod nano 3G (the original tar
 
 - Python 3.13, PySide6 (Qt6) — UI (packages live under `src/`)
 - `podracer_db` — pure-stdlib iTunesDB codec
-- ffmpeg — tagging + transcoding to AAC
+- ffmpeg — tagging + transcoding to MP3
 - `scripts/extract_fixtures.py` — pull the DB + sample tracks from a real iPod for tests
 - Tests: `python3 -m unittest discover -s tests -t . -v` (stdlib only)
 

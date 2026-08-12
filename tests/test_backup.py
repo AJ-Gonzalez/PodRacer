@@ -7,7 +7,7 @@ from pathlib import Path
 from podracer.backup import _sanitize, backup_collection
 from podracer_db.model import Library, Playlist, Track
 
-GUID = "000A27001BB9E492"
+GUID = "0011223344556677"
 
 
 def _track(folder: str, name: str, title: str, artist: str = "Artist",

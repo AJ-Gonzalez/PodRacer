@@ -25,10 +25,14 @@ class SysInfoTests(unittest.TestCase):
         if not path.is_file():
             self.skipTest("no extracted fixtures; run scripts/extract_fixtures.py")
         info = sysinfo.read_sysinfo_extended(path)
-        # The hash58 key, exactly as the codec tests use it.
-        self.assertEqual(info["FireWireGUID"], "000A27001BB9E492")
-        self.assertEqual(sysinfo.firewire_guid(info), "000A27001BB9E492")
-        self.assertEqual(info["SerialNumber"], "YM825HUD13F")
+        # The hash58 key, exactly as the codec tests use it. The real
+        # GUID/serial are hardware-identifying and live only in the
+        # gitignored tests/.fixture_guid file.
+        lines = (Path(__file__).resolve().parent / ".fixture_guid")
+        guid, serial = lines.read_text().splitlines()[:2]
+        self.assertEqual(info["FireWireGUID"], guid)
+        self.assertEqual(sysinfo.firewire_guid(info), guid)
+        self.assertEqual(info["SerialNumber"], serial)
         self.assertEqual(info["FamilyID"], 12)
         self.assertEqual(info["DBVersion"], 3)
 
@@ -37,7 +41,7 @@ class SysInfoTests(unittest.TestCase):
         # that break plistlib; the scanner must not choke on them.
         text = """
         <?xml version="1.0"?><plist version="1.0"><dict>
-        <key>FireWireGUID</key><string>000A27001BB9E492</string>
+        <key>FireWireGUID</key><string>0011223344556677</string>
         <key>ImageSpecifications</key>
         <array>
         <key>1067</key>
@@ -49,7 +53,7 @@ class SysInfoTests(unittest.TestCase):
         </dict></plist>
         """
         info = sysinfo.parse_sysinfo_extended(text)
-        self.assertEqual(info["FireWireGUID"], "000A27001BB9E492")
+        self.assertEqual(info["FireWireGUID"], "0011223344556677")
         self.assertEqual(info["MaxTracks"], 65534)
         self.assertEqual(info["CanHibernate"], False)
         self.assertEqual(info["RentalClockBias"], 2.5)

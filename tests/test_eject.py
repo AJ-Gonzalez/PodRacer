@@ -8,7 +8,7 @@ from podracer.eject import write_dbs
 from podracer_db import parse_db, write_db
 from podracer_db.model import Library, Playlist, Track
 
-GUID = "000A27001BB9E492"
+GUID = "0011223344556677"
 
 
 def _library() -> Library:

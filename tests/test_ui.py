@@ -197,7 +197,7 @@ class QuitGuardTests(_QtCase):
             (ipod_dir / "iPod_Control" / "Music").mkdir(parents=True)
             ipod = device.IPod(
                 mountpoint=ipod_dir, label="HYPERPINK", block_device="sdb1",
-                guid="000A27001BB9E492", serial="YM825HUD13F",
+                guid="0011223344556677", serial="AB12CD34EF56",
                 family_id=12, db_version=3,
             )
             win = MainWindow()

@@ -8,7 +8,7 @@ Public API:
     from podracer_db import parse_db, write_db
 
     lib = parse_db(db_bytes)          # Library
-    db_bytes = write_db(lib, firewire_guid="000A27001BB9E492")
+    db_bytes = write_db(lib, firewire_guid="0011223344556677")
 """
 
 from .binary import FormatError
