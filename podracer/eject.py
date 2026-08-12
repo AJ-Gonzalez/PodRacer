@@ -12,7 +12,7 @@ untested (see LESSONS.md).
 The hash58 checksum is applied when the device GUID is known (see
 podracer_db.hash58); without a GUID the scheme byte stays 0 and the
 hash slot stays empty.
-
+"""
 
 from __future__ import annotations
 
