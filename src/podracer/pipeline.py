@@ -32,19 +32,29 @@ NATIVE_EXTENSIONS = frozenset({".mp3", ".m4a", ".aac", ".wav", ".aiff", ".aif"})
 
 # Transcode target: MP3 256 kbps (user decision 2026-08-11: the AAC
 # container also needed a faststart moov; MP3 avoids the whole class).
-# All streams mapped so embedded cover art survives as ID3 APIC.
+# Embedded cover art is recompressed, never copied: the nano 3G's ID3
+# parser chokes on large tags (a 1400x1400 FLAC cover survives as an
+# ~890 KiB APIC; the device lists the track but refuses to play it).
+# iTunes recompresses art to 600x600 for the same reason; the nano
+# displays at 132px, so 600px is already oversampled. The '?' maps make
+# the art stream optional, so art-less sources still transcode.
 TRANSCODE_ARGS = [
     "ffmpeg", "-nostdin", "-y",
     "-i", "{src}",
-    "-map", "0",
+    "-map", "0:a?", "-map", "0:v?",
     "-c:a", "libmp3lame", "-b:a", "256k",
-    "-c:v", "copy",
+    "-c:v", "mjpeg", "-q:v", "8",
+    "-vf", "scale=600:600:force_original_aspect_ratio=decrease",
     "-id3v2_version", "3",
     # Explicit muxer: the temp file name has a .podracer-tmp suffix,
     # so ffmpeg cannot infer the format from the extension.
     "-f", "mp3",
     "{dst}",
 ]
+
+# The DB carries the encoded bitrate; hardcoded so it cannot drift
+# from the -b:a value above.
+TRANSCODE_BITRATE = 256_000
 
 # Everything we will copy or transcode when files/folders are dropped.
 AUDIO_EXTENSIONS = NATIVE_EXTENSIONS | frozenset(
@@ -242,6 +252,10 @@ def add_file(
         return AddResult(status="error", message=str(exc))
 
     track = probe
+    if needs_transcode(source):
+        # probe reads the source's bitrate (e.g. a FLAC's 1.8 Mbps);
+        # the DB must carry what we actually encoded.
+        track.bitrate = TRANSCODE_BITRATE
     track.ipod_path = ipod_path
     track.filetype = _FILETYPE_NAMES.get(
         Path(name).suffix.lstrip("."), "MPEG audio file"

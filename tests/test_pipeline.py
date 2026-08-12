@@ -23,6 +23,101 @@ def _make_audio(path: Path, fmt: str, tags: dict[str, str] | None = None) -> Pat
     return path
 
 
+def _make_flac_with_art(path: Path, tags: dict[str, str] | None = None) -> Path:
+    """FLAC with a big (3000x3000) embedded cover, to stress the
+    art-downscaling transcode path.
+
+    The picture block is inserted by hand: this ffmpeg build's FLAC
+    muxer writes an empty audio stream when an attached_pic is present,
+    so the picture must go in after encoding. FLAC picture blocks are
+    simple (type 6, size-prefixed fields), so this is deterministic
+    across ffmpeg versions.
+    """
+    _make_audio(path, "flac", tags)
+    jpeg = subprocess.run(
+        ["ffmpeg", "-nostdin", "-y", "-f", "lavfi",
+         "-i", "testsrc2=size=3000x3000:duration=0.04",
+         "-frames:v", "1", "-q:v", "1", "-f", "mjpeg", "-"],
+        capture_output=True, check=True, timeout=60,
+    ).stdout
+
+    data = path.read_bytes()
+    assert data[:4] == b"fLaC"
+    blocks: list[tuple[bool, int, bytes]] = []
+    pos = 4
+    while pos < len(data):
+        hdr = data[pos]
+        last = bool(hdr & 0x80)
+        size = int.from_bytes(data[pos + 1:pos + 4], "big")
+        blocks.append((last, hdr & 0x7F, data[pos + 4:pos + 4 + size]))
+        pos += 4 + size
+        if last:
+            break
+
+    out = bytearray(data[:4])
+    for last, btype, body in blocks:
+        # None of the existing blocks are last anymore: the PICTURE
+        # block we append below takes the last-flag (0x80).
+        out += bytes([btype]) + len(body).to_bytes(3, "big") + body
+    mime, desc = b"image/jpeg", b""
+    picture = (
+        (3).to_bytes(4, "big")                    # type: front cover
+        + len(mime).to_bytes(4, "big") + mime
+        + len(desc).to_bytes(4, "big") + desc
+        + (0).to_bytes(4, "big") * 4              # w/h/depth/colors unknown
+        + len(jpeg).to_bytes(4, "big") + jpeg
+    )
+    out += bytes([0x80 | 6]) + len(picture).to_bytes(3, "big") + picture
+    out += data[pos:]                             # audio frames follow
+    path.write_bytes(out)
+    return path
+
+
+def _source_art_size(path: Path) -> int:
+    """Bytes of the source's embedded cover art (0 if none).
+
+    Reads the FLAC PICTURE metadata block directly; the block format
+    is fixed by the spec (type/mime/desc/dims, then the image).
+    """
+    data = Path(path).read_bytes()
+    if data[:4] != b"fLaC":
+        return 0
+    pos = 4
+    while pos < len(data):
+        last = bool(data[pos] & 0x80)
+        btype = data[pos] & 0x7F
+        size = int.from_bytes(data[pos + 1:pos + 4], "big")
+        body = data[pos + 4:pos + 4 + size]
+        if btype == 6:  # PICTURE
+            mime_len = int.from_bytes(body[4:8], "big")
+            desc_len = int.from_bytes(body[8 + mime_len:12 + mime_len], "big")
+            data_len_off = 12 + mime_len + desc_len + 16
+            return int.from_bytes(body[data_len_off:data_len_off + 4], "big")
+        pos += 4 + size
+        if last:
+            break
+    return 0
+
+
+def _id3_info(path: Path) -> tuple[int, int]:
+    """(ID3v2 tag size, APIC frame count) of an MP3, or (0, 0) if untagged."""
+    data = Path(path).read_bytes()
+    if data[:3] != b"ID3":
+        return 0, 0
+    size = ((data[6] & 0x7F) << 21) | ((data[7] & 0x7F) << 14) \
+        | ((data[8] & 0x7F) << 7) | (data[9] & 0x7F)
+    apics = 0
+    pos, end = 10, 10 + size
+    while pos + 10 <= end:
+        if data[pos:pos + 4] == b"\x00\x00\x00\x00":
+            break
+        fsize = int.from_bytes(data[pos + 4:pos + 8], "big")
+        if data[pos:pos + 4] == b"APIC":
+            apics += 1
+        pos += 10 + fsize
+    return size, apics
+
+
 class NeedsTranscodeTests(unittest.TestCase):
     def test_native_extensions_copy(self):
         for ext in (".mp3", ".m4a", ".aac", ".wav", ".aiff", ".aif"):
@@ -105,11 +200,34 @@ class AddFileTests(unittest.TestCase):
         track = result.track
         self.assertTrue(track.ipod_path.endswith(".mp3"))
         self.assertEqual(track.filetype, "MPEG audio file")
+        # The DB must carry the encoded bitrate, not the FLAC's.
+        self.assertEqual(track.bitrate, pipeline.TRANSCODE_BITRATE)
         file_on_ipod = self.ipod_dir.joinpath(*pipeline.ipod_path_parts(track.ipod_path)[2:])
         self.assertTrue(file_on_ipod.is_file())
         # The transcoded file must itself be playable/parseable audio.
         probed = read_tags(file_on_ipod)
         self.assertEqual(probed.title, "Lossless")
+
+    def test_transcode_caps_embedded_art(self):
+        # The nano 3G refuses MP3s with large ID3 tags: a hi-res FLAC
+        # cover survives a verbatim copy as an ~890 KiB APIC and the
+        # track lists but never plays. Transcoding must recompress the
+        # art (iTunes-style, 600px) instead of copying it.
+        src = _make_flac_with_art(Path(self.tmp.name) / "bigart.flac",
+                                  {"title": "Big Art"})
+        # Sanity: the fixture really carries a large picture, or this
+        # test proves nothing.
+        self.assertGreaterEqual(_source_art_size(src), 300_000)
+
+        result = self._add(src)
+        self.assertEqual(result.status, "added")
+        track = result.track
+        file_on_ipod = self.ipod_dir.joinpath(*pipeline.ipod_path_parts(track.ipod_path)[2:])
+        tag_size, apics = _id3_info(file_on_ipod)
+        self.assertGreaterEqual(apics, 1)          # art preserved
+        self.assertLessEqual(tag_size, 200_000)    # but capped hard
+        probed = read_tags(file_on_ipod)
+        self.assertEqual(probed.title, "Big Art")
 
 
     def test_content_duplicate_skipped(self):
