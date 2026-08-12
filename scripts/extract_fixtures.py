@@ -2,7 +2,7 @@
 """Extract iTunesDB fixtures from a mounted iPod for the test suite.
 
 Copies the binary database (and a few sample tracks) from a real device into
-fixtures/raw/ so the ipod_db codec can be tested against real hardware data
+fixtures/raw/ so the podracer_db codec can be tested against real hardware data
 without the hardware present. Raw fixtures are gitignored.
 
 Usage:

@@ -1,4 +1,4 @@
-"""Entry point for ipod_thingy.
+"""Entry point for podracer.
 
 Opens the application shell. The two-pane UI lands in M3; this exists so the
 app can be launched and smoke-tested end to end from day one.
@@ -16,7 +16,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("ipod_thingy")
+        self.setWindowTitle("PodRacer")
         self.setCentralWidget(
             QLabel("Left: your music folder. Right: what goes on the iPod. UI lands in M3.")
         )

@@ -9,8 +9,8 @@ import struct
 import unittest
 from pathlib import Path
 
-from ipod_db import FormatError, compute_hash58, parse_db, write_db
-from ipod_db.model import Library, Playlist, Track
+from podracer_db import FormatError, compute_hash58, parse_db, write_db
+from podracer_db.model import Library, Playlist, Track
 
 RAW = Path(
     os.environ.get(

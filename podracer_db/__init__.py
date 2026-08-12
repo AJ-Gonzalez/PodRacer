@@ -5,7 +5,7 @@ independently of the Qt UI. Parse and write land in M1.
 
 Public API:
 
-    from ipod_db import parse_db, write_db
+    from podracer_db import parse_db, write_db
 
     lib = parse_db(db_bytes)          # Library
     db_bytes = write_db(lib, firewire_guid="000A27001BB9E492")
