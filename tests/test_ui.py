@@ -14,6 +14,8 @@ from PySide6.QtCore import QEvent, QMimeData, QPointF, Qt, QUrl
 from PySide6.QtGui import QDropEvent, QKeyEvent
 from PySide6.QtWidgets import QApplication, QHeaderView
 
+from podracer.fonts import FONT_OPTIONS, MAX_SIZE, MIN_SIZE
+from podracer.themes import THEMES
 from podracer.ui import LibraryView, MainWindow
 
 
@@ -230,6 +232,49 @@ class MusicHomeTests(_QtCase):
         win2 = MainWindow()
         self.assertEqual(win2._music_home(), str(Path.home()))
         win2.close()
+
+
+class AppearanceMenuTests(_QtCase):
+    def setUp(self):
+        # Isolate QSettings so switching themes in a test never touches
+        # the real saved appearance.
+        self._tmp = tempfile.TemporaryDirectory()
+        self._old_xdg = os.environ.get("XDG_CONFIG_HOME")
+        os.environ["XDG_CONFIG_HOME"] = self._tmp.name
+
+    def tearDown(self):
+        if self._old_xdg is None:
+            os.environ.pop("XDG_CONFIG_HOME", None)
+        else:
+            os.environ["XDG_CONFIG_HOME"] = self._old_xdg
+        self._tmp.cleanup()
+        super().tearDown()
+
+    def test_appearance_is_one_button_with_three_submenus(self):
+        win = MainWindow()
+        submenus = [a.text() for a in win.appearance_menu.actions() if a.menu()]
+        self.assertEqual(submenus, ["Theme", "Font", "Font size"])
+        self.assertEqual(len(win._theme_actions), len(THEMES))
+        self.assertEqual(len(win._font_actions), len(FONT_OPTIONS))
+        self.assertEqual(len(win._size_actions), MAX_SIZE - MIN_SIZE + 1)
+        win.close()
+
+    def test_theme_switch_moves_checkmark(self):
+        win = MainWindow()
+        win._apply_theme(THEMES[1])
+        checked = [a for a in win._theme_actions if a.isChecked()]
+        self.assertEqual(len(checked), 1)
+        self.assertEqual(checked[0].text(), THEMES[1].name)
+        win.close()
+
+    def test_size_action_applies_and_checks(self):
+        win = MainWindow()
+        target = win._size_actions[0]
+        target.trigger()
+        self.assertEqual(win._font_size, MIN_SIZE)
+        checked = [a for a in win._size_actions if a.isChecked()]
+        self.assertEqual([a.text() for a in checked], [f"{MIN_SIZE} pt"])
+        win.close()
 
 
 if __name__ == "__main__":

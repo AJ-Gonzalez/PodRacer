@@ -16,6 +16,8 @@ from __future__ import annotations
 import time
 from datetime import date
 from pathlib import Path
+
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtCore import (
     QAbstractTableModel,
     QModelIndex,
@@ -384,22 +386,16 @@ class MainWindow(QMainWindow):
         self.remove_button.setToolTip(
             "Remove the selected songs from the iPod (keyboard: Delete)."
         )
-        self.theme_button = QPushButton("Theme", self)
-        self.theme_button.setToolTip("Switch the look of PodRacer (instant).")
-        self.theme_button.clicked.connect(self._show_theme_menu)
-        self.theme_menu = QMenu(self)
+        self.appearance_button = QPushButton("Appearance", self)
+        self.appearance_button.setToolTip(
+            "The look of PodRacer: theme, font, and text size "
+            "(shortcuts: Ctrl+ / Ctrl−)."
+        )
+        self.appearance_button.clicked.connect(self._show_appearance_menu)
+        self.appearance_menu = QMenu(self)
         self._theme_actions: list = []
-        self.font_button = QPushButton("Font", self)
-        self.font_button.setToolTip("Choose the text font.")
-        self.font_button.clicked.connect(self._show_font_menu)
-        self.font_menu = QMenu(self)
         self._font_actions: list = []
-        self.size_down = QPushButton("Aa−", self)
-        self.size_down.setToolTip("Smaller text")
-        self.size_down.clicked.connect(lambda: self._bump_font(-1))
-        self.size_up = QPushButton("Aa+", self)
-        self.size_up.setToolTip("Larger text")
-        self.size_up.clicked.connect(lambda: self._bump_font(1))
+        self._size_actions: list = []
         self.statusBar().addWidget(self.device_label)
         self.statusBar().addWidget(self.track_count)
         # Status messages go in a real label, never QStatusBar.showMessage:
@@ -419,13 +415,13 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.eject_button)
         self.statusBar().addPermanentWidget(self.backup_button)
         self.statusBar().addPermanentWidget(self.check_button)
-        self.statusBar().addPermanentWidget(self.theme_button)
-        self.statusBar().addPermanentWidget(self.font_button)
-        self.statusBar().addPermanentWidget(self.size_down)
-        self.statusBar().addPermanentWidget(self.size_up)
-        self._rebuild_theme_menu()
-        self._rebuild_font_menu()
+        self.statusBar().addPermanentWidget(self.appearance_button)
         self._load_settings()
+        # Font size stays one keystroke away even behind the menu.
+        QShortcut(QKeySequence(QKeySequence.StandardKey.ZoomIn), self,
+                  lambda: self._bump_font(1))
+        QShortcut(QKeySequence(QKeySequence.StandardKey.ZoomOut), self,
+                  lambda: self._bump_font(-1))
 
         # -- device watcher ----------------------------------------------
         self._timer = QTimer(self)
@@ -435,40 +431,64 @@ class MainWindow(QMainWindow):
         self._poll_device()
 
 
-    # -- theme ----------------------------------------------------------
+    # -- appearance ------------------------------------------------------
 
-    def _rebuild_theme_menu(self) -> None:
-        self.theme_menu.clear()
+    def _rebuild_appearance_menu(self) -> None:
+        """Theme, font, and size submenus, checkmark on the current."""
+        self.appearance_menu.clear()
         self._theme_actions = []
-        current = self.theme_button.text()
+        self._font_actions = []
+        self._size_actions = []
+
+        theme_menu = self.appearance_menu.addMenu("Theme")
         for theme in THEMES:
-            action = self.theme_menu.addAction(theme.name)
+            action = theme_menu.addAction(theme.name)
             action.setCheckable(True)
-            action.setChecked(theme.name == current)
+            action.setChecked(theme.name == self._theme_name)
             action.triggered.connect(
                 lambda _=False, t=theme: self._apply_theme(t)
             )
             self._theme_actions.append(action)
 
-    # -- font / size / persistence --------------------------------------
-
-    def _rebuild_font_menu(self) -> None:
-        self.font_menu.clear()
-        self._font_actions = []
-        current = self.font_button.text()
+        font_menu = self.appearance_menu.addMenu("Font")
         for label, family in FONT_OPTIONS:
-            action = self.font_menu.addAction(label)
+            action = font_menu.addAction(label)
             action.setCheckable(True)
-            action.setChecked(label == current)
+            action.setChecked(label == self._font_label())
             action.triggered.connect(
                 lambda _=False, f=family: self._apply_font_family(f)
             )
             self._font_actions.append(action)
 
-    def _show_font_menu(self) -> None:
-        self.font_menu.exec(self.font_button.mapToGlobal(
-            self.font_button.rect().bottomLeft()
+        size_menu = self.appearance_menu.addMenu("Font size")
+        for size in range(MIN_SIZE, MAX_SIZE + 1):
+            action = size_menu.addAction(f"{size} pt")
+            action.setCheckable(True)
+            action.setChecked(size == self._font_size)
+            action.triggered.connect(
+                lambda _=False, s=size: self._set_font(self._font_family, s)
+            )
+            self._size_actions.append(action)
+
+    def _font_label(self) -> str:
+        return next(
+            (label for label, fam in FONT_OPTIONS if fam == self._font_family),
+            self._font_family,
+        )
+
+    def _show_appearance_menu(self) -> None:
+        self.appearance_menu.exec(self.appearance_button.mapToGlobal(
+            self.appearance_button.rect().bottomLeft()
         ))
+
+    def _apply_theme(self, theme) -> None:
+        app = QApplication.instance()
+        if app is not None:
+            apply_theme(app, theme)
+        self._theme_name = theme.name
+        self.settings.setValue("theme/name", theme.name)
+        self._rebuild_appearance_menu()
+        self._status(f"Theme: {theme.name}")
 
     def _apply_font_family(self, family: str) -> None:
         self._set_font(family, self._font_size)
@@ -484,12 +504,10 @@ class MainWindow(QMainWindow):
         self._font_family = family
         self._font_size = max(MIN_SIZE, min(MAX_SIZE, size))
         apply_font(app, family, self._font_size)
-        label = next((l for l, f in FONT_OPTIONS if f == family), family)
-        self.font_button.setText(label)
         self.settings.setValue("font/family", family)
         self.settings.setValue("font/size", self._font_size)
-        self._rebuild_font_menu()
-        self._status(f"Text: {label}, {self._font_size} pt")
+        self._rebuild_appearance_menu()
+        self._status(f"Text: {self._font_label()}, {self._font_size} pt")
 
     def _load_settings(self) -> None:
         theme_name = self.settings.value("theme/name", THEMES[0].name, str)
@@ -498,11 +516,10 @@ class MainWindow(QMainWindow):
             theme = theme_by_name(theme_name)
         except KeyError:
             theme = THEMES[0]
+        self._theme_name = theme.name
         app = QApplication.instance()
         if app is not None:
             apply_theme(app, theme)
-        self.theme_button.setText(theme.name)
-        self._rebuild_theme_menu()
 
         family = self.settings.value("font/family", "", str)
         if app is not None and app.font().pointSize() > 0:
@@ -515,23 +532,7 @@ class MainWindow(QMainWindow):
         if app is not None:
             register_fonts()
             apply_font(app, family, size)
-        label = next((l for l, f in FONT_OPTIONS if f == family), family)
-        self.font_button.setText(label)
-        self._rebuild_font_menu()
-
-    def _show_theme_menu(self) -> None:
-        self.theme_menu.exec(self.theme_button.mapToGlobal(
-            self.theme_button.rect().bottomLeft()
-        ))
-
-    def _apply_theme(self, theme) -> None:
-        app = QApplication.instance()
-        if app is not None:
-            apply_theme(app, theme)
-        self.theme_button.setText(theme.name)
-        self.settings.setValue("theme/name", theme.name)
-        self._rebuild_theme_menu()
-        self._status(f"Theme: {theme.name}")
+        self._rebuild_appearance_menu()
 
 
     # -- device ---------------------------------------------------------
