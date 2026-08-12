@@ -593,6 +593,59 @@ def just_blues() -> Theme:
     )
 
 
+def lilac_love() -> Theme:
+    """Lilac Love: deep-purple night with a vivid violet accent
+    (palette 2d033b / 810ca8 / c147e9 / e5b8f4, colorhunt.co). Dark.
+    """
+    return Theme(
+        name="Lilac Love",
+        colors={
+            "deep-plum": "#2d033b",
+            "vivid-violet": "#810ca8",
+            "bright-lilac": "#c147e9",
+            "pale-lilac": "#e5b8f4",
+        },
+        window_gradient=("#2d033b", "#810ca8"),
+        accent="#810ca8",               # vivid violet: white clears AA
+        accent2="#c147e9",              # bright lilac: focus/borders
+        panel_bg="#2d033b",             # deep plum
+        panel_text="#e5b8f4",           # pale lilac
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#e5b8f4",
+        header_gradient=("#810ca8", "#2d033b"),
+        header_text="#ffffff",
+        button_to="#5a0778",            # deeper violet second stop
+    )
+
+
+def minty_forest() -> Theme:
+    """Minty Forest: cream panels under a mint -> teal sweep with a
+    deep-forest accent (palette 1a312c / 428475 / 89d7b7 / fff4e1,
+    colorhunt.co)."""
+    return Theme(
+        name="Minty Forest",
+        colors={
+            "forest": "#1a312c",
+            "deep-teal": "#2e5c4e",
+            "teal": "#428475",
+            "mint": "#89d7b7",
+            "cream": "#fff4e1",
+        },
+        window_gradient=("#89d7b7", "#428475"),
+        accent="#1a312c",               # forest: white text clears AA
+        accent2="#428475",              # teal: focus/borders
+        panel_bg="#fff4e1",             # cream
+        panel_text="#1a312c",           # forest
+        text_on_accent="#ffffff",
+        status_bg="rgba(255, 255, 255, 0.45)",
+        status_text="#1a312c",
+        header_gradient=("#2e5c4e", "#1a312c"),
+        header_text="#ffffff",
+        button_to="#2e5c4e",            # deep teal second stop
+    )
+
+
 THEMES: list[Theme] = [
     magenta_daydream(),
     grey_moonlight(),
@@ -607,6 +660,8 @@ THEMES: list[Theme] = [
     aqua(),
     dark_aqua(),
     just_blues(),
+    lilac_love(),
+    minty_forest(),
 ]
 
 
