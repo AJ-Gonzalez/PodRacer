@@ -13,7 +13,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, QThread, QTimer, Signal
+from PySide6.QtCore import (
+    QAbstractTableModel,
+    QModelIndex,
+    QSettings,
+    Qt,
+    QThread,
+    QTimer,
+    Signal,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -32,13 +40,12 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from . import device
+from .fonts import FONT_OPTIONS, MAX_SIZE, MIN_SIZE, apply_font, register_fonts
 from .pipeline import AddResult
 from .sync import SyncSession
 from .themes import THEMES, apply_theme
 from podracer_db.model import Track
-
 
 def _fmt_ms(ms: int) -> str:
     ms = max(0, ms)
@@ -210,13 +217,29 @@ class MainWindow(QMainWindow):
         self.theme_button.clicked.connect(self._show_theme_menu)
         self.theme_menu = QMenu(self)
         self._theme_actions: list = []
+        self.font_button = QPushButton("Font", self)
+        self.font_button.setToolTip("Choose the text font.")
+        self.font_button.clicked.connect(self._show_font_menu)
+        self.font_menu = QMenu(self)
+        self._font_actions: list = []
+        self.size_down = QPushButton("Aa−", self)
+        self.size_down.setToolTip("Smaller text")
+        self.size_down.clicked.connect(lambda: self._bump_font(-1))
+        self.size_up = QPushButton("Aa+", self)
+        self.size_up.setToolTip("Larger text")
+        self.size_up.clicked.connect(lambda: self._bump_font(1))
         self.statusBar().addWidget(self.device_label)
         self.statusBar().addWidget(self.track_count)
         self.statusBar().addPermanentWidget(self.progress)
         self.statusBar().addPermanentWidget(self.cancel_button)
         self.statusBar().addPermanentWidget(self.eject_button)
         self.statusBar().addPermanentWidget(self.theme_button)
+        self.statusBar().addPermanentWidget(self.font_button)
+        self.statusBar().addPermanentWidget(self.size_down)
+        self.statusBar().addPermanentWidget(self.size_up)
         self._rebuild_theme_menu()
+        self._rebuild_font_menu()
+        self._load_settings()
 
         # -- device watcher ----------------------------------------------
         self._timer = QTimer(self)
@@ -245,6 +268,76 @@ class MainWindow(QMainWindow):
             )
             self._theme_actions.append(action)
 
+    # -- font / size / persistence --------------------------------------
+
+    def _rebuild_font_menu(self) -> None:
+        self.font_menu.clear()
+        self._font_actions = []
+        current = self.font_button.text()
+        for label, family in FONT_OPTIONS:
+            action = self.font_menu.addAction(label)
+            action.setCheckable(True)
+            action.setChecked(label == current)
+            action.triggered.connect(
+                lambda _=False, f=family: self._apply_font_family(f)
+            )
+            self._font_actions.append(action)
+
+    def _show_font_menu(self) -> None:
+        self.font_menu.exec(self.font_button.mapToGlobal(
+            self.font_button.rect().bottomLeft()
+        ))
+
+    def _apply_font_family(self, family: str) -> None:
+        self._set_font(family, self._font_size)
+
+    def _bump_font(self, delta: int) -> None:
+        self._set_font(self._font_family, self._font_size + delta)
+
+    def _set_font(self, family: str, size: int) -> None:
+        app = QApplication.instance()
+        if app is None:
+            return
+        register_fonts()
+        self._font_family = family
+        self._font_size = max(MIN_SIZE, min(MAX_SIZE, size))
+        apply_font(app, family, self._font_size)
+        label = next((l for l, f in FONT_OPTIONS if f == family), family)
+        self.font_button.setText(label)
+        self.settings.setValue("font/family", family)
+        self.settings.setValue("font/size", self._font_size)
+        self._rebuild_font_menu()
+        self._status(f"Text: {label}, {self._font_size} pt")
+
+    def _load_settings(self) -> None:
+        self.settings = QSettings("PodRacer", "PodRacer")
+        theme_name = self.settings.value("theme/name", THEMES[0].name, str)
+        try:
+            from .themes import theme_by_name
+            theme = theme_by_name(theme_name)
+        except KeyError:
+            theme = THEMES[0]
+        app = QApplication.instance()
+        if app is not None:
+            apply_theme(app, theme)
+        self.theme_button.setText(theme.name)
+        self._rebuild_theme_menu()
+
+        family = self.settings.value("font/family", "", str)
+        if app is not None and app.font().pointSize() > 0:
+            default_size = app.font().pointSize()
+        else:
+            default_size = 10
+        size = int(self.settings.value("font/size", default_size, int))
+        self._font_family = family
+        self._font_size = size
+        if app is not None:
+            register_fonts()
+            apply_font(app, family, size)
+        label = next((l for l, f in FONT_OPTIONS if f == family), family)
+        self.font_button.setText(label)
+        self._rebuild_font_menu()
+
     def _show_theme_menu(self) -> None:
         self.theme_menu.exec(self.theme_button.mapToGlobal(
             self.theme_button.rect().bottomLeft()
@@ -255,6 +348,7 @@ class MainWindow(QMainWindow):
         if app is not None:
             apply_theme(app, theme)
         self.theme_button.setText(theme.name)
+        self.settings.setValue("theme/name", theme.name)
         self._rebuild_theme_menu()
         self._status(f"Theme: {theme.name}")
 

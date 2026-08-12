@@ -66,9 +66,17 @@ class ApplyThemeTests(unittest.TestCase):
     def test_qss_covers_required_widgets(self):
         qss = THEMES[0].qss()
         for selector in ("QMainWindow", "QTreeView, QTableView", "QHeaderView::section",
-                         "QPushButton", "QProgressBar", "QStatusBar", "QMenu",
-                         "QLineEdit", "QToolTip", "QScrollBar"):
+                         "QPushButton", "QPushButton:disabled", "QProgressBar",
+                         "QStatusBar", "QMenu", "QLineEdit", "QToolTip",
+                         "QScrollBar"):
             self.assertIn(selector, qss)
+
+    def test_disabled_button_is_visible(self):
+        # The disabled state must stay readable on any background:
+        # accent-tinted fill with faded accent text (not white-on-white).
+        qss = THEMES[0].qss()
+        self.assertIn("rgba(183, 9, 76, 0.35)", qss)   # accent fill
+        self.assertIn("rgba(255, 255, 255, 0.6)", qss)  # faded text
 
 
 if __name__ == "__main__":

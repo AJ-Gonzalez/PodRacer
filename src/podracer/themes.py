@@ -139,9 +139,9 @@ QPushButton {{
 QPushButton:hover {{ background: {rgba_of(self.accent, 0.85)}; }}
 QPushButton:pressed {{ background: {pressed}; }}
 QPushButton:disabled {{
-    background: rgba(255, 255, 255, 0.25);
-    color: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: {rgba_of(self.accent, 0.35)};
+    color: {rgba_of(self.text_on_accent, 0.6)};
+    border: 1px solid {rgba_of(self.accent, 0.5)};
 }}
 QPushButton[flat="true"] {{
     background: transparent;
