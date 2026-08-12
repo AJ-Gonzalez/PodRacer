@@ -9,6 +9,10 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
+    # The Release step creates a GitHub Release; the default token is
+    # read-only, so the job must request write access to contents.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
