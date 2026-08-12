@@ -1,0 +1,237 @@
+"""Themes: palettes + generated QSS for the whole app.
+
+A Theme is a named palette plus the role mapping that turns it into a
+stylesheet. `apply_theme()` re-skins the running app instantly, so the
+status-bar switcher is a real one-click flip. Themes are added one at
+a time as plain palette data (see magenta_daydream below); the QSS
+template is shared.
+
+Contrast discipline: body text pairs must reach WCAG AA (>= 4.5:1);
+the tests check every theme's text-on-panel and text-on-accent pairs.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+
+from PySide6.QtGui import QColor, QPalette
+
+_HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$")
+
+
+def _rgb(hex_color: str) -> tuple[int, int, int]:
+    if not _HEX_RE.match(hex_color):
+        raise ValueError(f"not a hex color: {hex_color!r}")
+    return (
+        int(hex_color[1:3], 16),
+        int(hex_color[3:5], 16),
+        int(hex_color[5:7], 16),
+    )
+
+
+def relative_luminance(hex_color: str) -> float:
+    """WCAG relative luminance of a #rrggbb color."""
+    r, g, b = (c / 255 for c in _rgb(hex_color))
+    def linear(channel: float) -> float:
+        return channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4
+    return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
+
+
+def contrast_ratio(a: str, b: str) -> float:
+    """WCAG contrast ratio between two hex colors."""
+    la, lb = relative_luminance(a), relative_luminance(b)
+    hi, lo = max(la, lb), min(la, lb)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+@dataclass(frozen=True)
+class Theme:
+    name: str
+    colors: dict[str, str]                       # the raw palette, as given
+    window_gradient: tuple[str, str]             # backdrop sweep (from, to)
+    accent: str                                  # primary: buttons, selection
+    accent2: str                                 # secondary: focus, links
+    panel_bg: str                                # table/input background
+    panel_text: str                              # text on panels
+    text_on_accent: str = "#ffffff"
+    status_bg: str = "rgba(12, 10, 26, 0.35)"    # translucent over the gradient
+    status_text: str = "#ffffff"
+    header_gradient: tuple[str, str] = ("#723c70", "#455e89")
+
+    def qss(self) -> str:
+        from_, to_ = self.window_gradient
+        h1, h2 = self.header_gradient
+        return f"""
+QMainWindow {{
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 {from_}, stop:1 {to_});
+}}
+QSplitter::handle {{ background: transparent; }}
+QSplitter::handle:hover {{ background: rgba(255, 255, 255, 0.35); }}
+
+QTreeView, QTableView {{
+    background: {self.panel_bg};
+    alternate-background-color: rgba(92, 77, 125, 0.08);
+    color: {self.panel_text};
+    border: none;
+    gridline-color: rgba(69, 94, 137, 0.25);
+    selection-background-color: {self.accent};
+    selection-color: {self.text_on_accent};
+}}
+QTreeView::item:hover, QTableView::item:hover {{
+    background: rgba(183, 9, 76, 0.12);
+}}
+
+QHeaderView::section {{
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 {h1}, stop:1 {h2});
+    color: #ffffff;
+    border: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 5px 8px;
+}}
+
+QLineEdit {{
+    background: {self.panel_bg};
+    color: {self.panel_text};
+    border: 1px solid {self.accent2};
+    border-radius: 4px;
+    padding: 3px 6px;
+    selection-background-color: {self.accent};
+    selection-color: {self.text_on_accent};
+}}
+QLineEdit:focus {{ border: 1px solid {self.accent}; }}
+
+QPushButton {{
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 {self.accent}, stop:1 {self.colors['dark-raspberry']});
+    color: {self.text_on_accent};
+    border: 1px solid rgba(255, 255, 255, 0.30);
+    border-radius: 6px;
+    padding: 4px 12px;
+}}
+QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+    stop:0 #d2165d, stop:1 {self.accent}); }}
+QPushButton:pressed {{ background: {self.colors['royal-plum']}; }}
+QPushButton:disabled {{
+    background: rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}}
+QPushButton[flat="true"] {{
+    background: transparent;
+    border: none;
+    color: {self.status_text};
+    padding: 2px 6px;
+    text-align: left;
+}}
+QPushButton[flat="true"]:hover {{ background: rgba(255, 255, 255, 0.15); }}
+
+QProgressBar {{
+    background: rgba(255, 255, 255, 0.25);
+    border: none;
+    border-radius: 4px;
+    color: #ffffff;
+    text-align: center;
+}}
+QProgressBar::chunk {{
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 {self.accent}, stop:1 {self.accent2});
+    border-radius: 4px;
+}}
+
+QStatusBar {{
+    background: {self.status_bg};
+    color: {self.status_text};
+}}
+QStatusBar::item {{ border: none; }}
+
+QMenu {{
+    background: {self.panel_bg};
+    color: {self.panel_text};
+    border: 1px solid {self.colors['dusty-grape']};
+    border-radius: 6px;
+    padding: 4px;
+}}
+QMenu::item {{ padding: 5px 24px 5px 10px; border-radius: 4px; }}
+QMenu::item:selected {{ background: {self.accent}; color: {self.text_on_accent}; }}
+QMenu::item:checked {{ background: {self.colors['velvet-purple']}; color: #ffffff; }}
+
+QToolTip {{
+    background: {self.panel_bg};
+    color: {self.panel_text};
+    border: 1px solid {self.accent2};
+    padding: 3px 6px;
+}}
+
+QScrollBar:vertical {{ background: rgba(255, 255, 255, 0.15); width: 10px; margin: 0; }}
+QScrollBar::handle:vertical {{ background: rgba(255, 255, 255, 0.45); border-radius: 5px; min-height: 24px; }}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
+QScrollBar:horizontal {{ background: rgba(255, 255, 255, 0.15); height: 10px; margin: 0; }}
+QScrollBar::handle:horizontal {{ background: rgba(255, 255, 255, 0.45); border-radius: 5px; min-width: 24px; }}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
+"""
+
+    def palette(self) -> QPalette:
+        pal = QPalette()
+        window = QColor(self.window_gradient[0])
+        pal.setColor(QPalette.ColorRole.Window, window)
+        pal.setColor(QPalette.ColorRole.WindowText, QColor(self.status_text))
+        pal.setColor(QPalette.ColorRole.Base, QColor(self.panel_bg))
+        pal.setColor(QPalette.ColorRole.AlternateBase, QColor(self.colors["dusty-grape"]))
+        pal.setColor(QPalette.ColorRole.Text, QColor(self.panel_text))
+        pal.setColor(QPalette.ColorRole.Button, QColor(self.accent))
+        pal.setColor(QPalette.ColorRole.ButtonText, QColor(self.text_on_accent))
+        pal.setColor(QPalette.ColorRole.Highlight, QColor(self.accent))
+        pal.setColor(QPalette.ColorRole.HighlightedText, QColor(self.text_on_accent))
+        pal.setColor(QPalette.ColorRole.Link, QColor(self.accent2))
+        pal.setColor(QPalette.ColorRole.PlaceholderText, QColor(self.colors["dusty-grape"]))
+        pal.setColor(QPalette.ColorRole.ToolTipBase, QColor(self.panel_bg))
+        pal.setColor(QPalette.ColorRole.ToolTipText, QColor(self.panel_text))
+        return pal
+
+
+def magenta_daydream() -> Theme:
+    """Magenta Daydream: cherry-rose -> pacific-cyan sweep.
+
+    Palette as given by the user; panel colors adjusted for contrast
+    (near-white panels carry dark plum text; accents keep >= 4.5:1
+    with white text; cyan is used for borders/links, not body text).
+    """
+    return Theme(
+        name="Magenta Daydream",
+        colors={
+            "cherry-rose": "#b7094c",
+            "dark-raspberry": "#a01a58",
+            "royal-plum": "#892b64",
+            "velvet-purple": "#723c70",
+            "dusty-grape": "#5c4d7d",
+            "dusk-blue": "#455e89",
+            "rich-cerulean": "#2e6f95",
+            "cerulean": "#1780a1",
+            "pacific-cyan": "#0091ad",
+        },
+        window_gradient=("#b7094c", "#0091ad"),
+        accent="#b7094c",
+        accent2="#1780a1",
+        panel_bg="#fdf6fa",
+        panel_text="#2b1420",
+        header_gradient=("#723c70", "#455e89"),
+    )
+
+
+THEMES: list[Theme] = [magenta_daydream()]
+
+
+def apply_theme(app, theme: Theme) -> None:
+    """Re-skin @app with @theme immediately (no restart)."""
+    app.setPalette(theme.palette())
+    app.setStyleSheet(theme.qss())
+
+
+def theme_by_name(name: str) -> Theme:
+    for theme in THEMES:
+        if theme.name == name:
+            return theme
+    raise KeyError(name)

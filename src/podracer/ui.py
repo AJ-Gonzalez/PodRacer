@@ -16,11 +16,13 @@ from pathlib import Path
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, QThread, QTimer, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QFileSystemModel,
     QHBoxLayout,
     QHeaderView,
     QLineEdit,
     QMainWindow,
+    QMenu,
     QMessageBox,
     QProgressBar,
     QPushButton,
@@ -34,6 +36,7 @@ from PySide6.QtWidgets import (
 from . import device
 from .pipeline import AddResult
 from .sync import SyncSession
+from .themes import THEMES, apply_theme
 from podracer_db.model import Track
 
 
@@ -202,11 +205,18 @@ class MainWindow(QMainWindow):
         self.eject_button.clicked.connect(self._eject)
         self.eject_button.setEnabled(False)
         self.eject_button.setToolTip("Write the library to the iPod and unmount it.")
+        self.theme_button = QPushButton("Theme", self)
+        self.theme_button.setToolTip("Switch the look of PodRacer (instant).")
+        self.theme_button.clicked.connect(self._show_theme_menu)
+        self.theme_menu = QMenu(self)
+        self._theme_actions: list = []
         self.statusBar().addWidget(self.device_label)
         self.statusBar().addWidget(self.track_count)
         self.statusBar().addPermanentWidget(self.progress)
         self.statusBar().addPermanentWidget(self.cancel_button)
         self.statusBar().addPermanentWidget(self.eject_button)
+        self.statusBar().addPermanentWidget(self.theme_button)
+        self._rebuild_theme_menu()
 
         # -- device watcher ----------------------------------------------
         self._timer = QTimer(self)
@@ -219,6 +229,35 @@ class MainWindow(QMainWindow):
         self.lib_view.dragEnterEvent = self._drag_enter
         self.lib_view.dropEvent = self._drop
         self.lib_view.keyPressEvent = self._lib_key
+
+    # -- theme ----------------------------------------------------------
+
+    def _rebuild_theme_menu(self) -> None:
+        self.theme_menu.clear()
+        self._theme_actions = []
+        current = self.theme_button.text()
+        for theme in THEMES:
+            action = self.theme_menu.addAction(theme.name)
+            action.setCheckable(True)
+            action.setChecked(theme.name == current)
+            action.triggered.connect(
+                lambda _=False, t=theme: self._apply_theme(t)
+            )
+            self._theme_actions.append(action)
+
+    def _show_theme_menu(self) -> None:
+        self.theme_menu.exec(self.theme_button.mapToGlobal(
+            self.theme_button.rect().bottomLeft()
+        ))
+
+    def _apply_theme(self, theme) -> None:
+        app = QApplication.instance()
+        if app is not None:
+            apply_theme(app, theme)
+        self.theme_button.setText(theme.name)
+        self._rebuild_theme_menu()
+        self._status(f"Theme: {theme.name}")
+
 
     # -- device ---------------------------------------------------------
 

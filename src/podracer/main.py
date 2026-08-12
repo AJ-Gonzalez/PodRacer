@@ -15,6 +15,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 # Absolute import: this file also runs as a bare script inside the
 # onefile bundle, where relative imports have no parent package.
+from podracer.themes import THEMES, apply_theme
 from podracer.ui import MainWindow
 
 
@@ -22,9 +23,10 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("PodRacer")
     app.setOrganizationName("PodRacer")
-    # Theme system lands after the layout; Fusion gives the styling a
-    # stable base meanwhile.
+    # Fusion as the style base so the theme QSS paints consistently
+    # across desktops; the status-bar Theme button re-skins live.
     app.setStyle("Fusion")
+    apply_theme(app, THEMES[0])
 
     if not shutil.which("ffmpeg"):
         QMessageBox.critical(
