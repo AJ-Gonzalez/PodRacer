@@ -351,7 +351,8 @@ class MainWindow(QMainWindow):
         self.cancel_button = QPushButton("Cancel", self)
         self.cancel_button.clicked.connect(self._cancel_add)
         self.cancel_button.hide()
-        self.eject_button = QPushButton("Sync & Eject", self)
+        # '&' is Qt's mnemonic marker; '&&' renders a literal ampersand.
+        self.eject_button = QPushButton("Sync && Eject", self)
         self.eject_button.clicked.connect(self._eject)
         self.eject_button.setEnabled(False)
         self.eject_button.setToolTip(
@@ -976,7 +977,7 @@ class MainWindow(QMainWindow):
                 "Sync writes them now. Quitting without syncing loses them."
             )
             sync_quit = box.addButton(
-                "Sync & Quit", QMessageBox.ButtonRole.AcceptRole
+                "Sync && Quit", QMessageBox.ButtonRole.AcceptRole
             )
             quit_anyway = box.addButton(
                 "Quit anyway", QMessageBox.ButtonRole.DestructiveRole
