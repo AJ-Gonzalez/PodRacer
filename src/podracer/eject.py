@@ -37,15 +37,25 @@ def write_dbs(itunes_dir: str | Path, db_bytes: bytes) -> None:
     os.replace(tmp, dest)  # atomic on the same filesystem
 
 
+def sync_ipod(ipod: IPod, lib: Library) -> None:
+    """Write the current library state to the device; keep it mounted.
+
+    This is the commit step for adds/deletes: the app holds all
+    changes in memory until the user Syncs (or Syncs & Ejects), so
+    closing without one of them loses the changes.
+    """
+    guid = ipod.guid if ipod and ipod.guid else None
+    db_bytes = write_db(lib, firewire_guid=guid)
+    write_dbs(ipod.ipod_control / "iTunes", db_bytes)
+
+
 def eject_ipod(ipod: IPod, lib: Library, unmount: bool = True) -> None:
-    """Serialize @lib and write it to @ipod, then unmount.
+    """Serialize @lib and write it to @ipod, then unmount (unless told not to).
 
     The iTunesSD file (shuffle-format leftover) is left untouched:
     the device never reads it, and deleting it before the old sync
     tool is fully retired is unnecessary churn.
     """
-    guid = ipod.guid if ipod and ipod.guid else None
-    db_bytes = write_db(lib, firewire_guid=guid)
-    write_dbs(ipod.ipod_control / "iTunes", db_bytes)
+    sync_ipod(ipod, lib)
     if unmount:
         unmount_ipod(ipod)

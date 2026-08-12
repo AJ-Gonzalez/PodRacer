@@ -80,6 +80,19 @@ class SyncSessionTests(unittest.TestCase):
         self.assertEqual(len(self.session.tracks), 136)
         self.assertNotIn(track, self.session.lib.master_playlist().members)
 
+    def test_sync_writes_db_keeps_mounted(self):
+        src = Path(self.tmp.name) / "sync.mp3"
+        _make_mp3(src, title="Sync Me")
+        self.session.add(src)
+        # The commit step: DB on the device reflects the add, and the
+        # mountpoint is untouched (no unmount involved).
+        self.session.sync()
+        db = self.ipod.db_path.read_bytes()
+        back = parse_db(db)
+        self.assertEqual(len(back.tracks), 137)
+        self.assertEqual(back.tracks[-1].title, "Sync Me")
+        self.assertTrue(self.ipod.mountpoint.is_dir())
+
     def test_eject_writes_db_without_unmount(self):
         src = Path(self.tmp.name) / "eject.mp3"
         _make_mp3(src, title="Eject Me")

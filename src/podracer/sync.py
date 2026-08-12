@@ -6,8 +6,8 @@ session owns the parsed library, the provenance sidecar, and the
 device handle.
 
 Lifecycle: connect() when the iPod appears, disconnect() when it
-disappears, add()/remove() while connected, eject() to write and
-unmount.
+disappears, add()/remove() while connected, sync() to write the DB
+without unmounting, eject() to write and unmount.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from pathlib import Path
 from podracer_db import parse_db
 from podracer_db.model import Library, Playlist, Track
 from .device import IPod
-from .eject import eject_ipod as _eject_ipod
+from .eject import eject_ipod as _eject_ipod, sync_ipod as _sync_ipod
 
 from .pipeline import AddResult, add_file, ipod_path_parts
 from .provenance import ProvenanceDB, default_db_path
@@ -74,6 +74,14 @@ class SyncSession:
         mpl = self.lib.master_playlist()
         if mpl is not None and track in mpl.members:
             mpl.members.remove(track)
+
+    def sync(self) -> None:
+        """Write the library to the device now; keep it mounted.
+
+        The commit step for adds/deletes — use before quitting or
+        unplugging so changes survive. Eject() is this plus unmount.
+        """
+        _sync_ipod(self.ipod, self.lib)
 
     def eject(self, unmount: bool = True) -> None:
         """Write the library to the device; unmount unless told not to."""

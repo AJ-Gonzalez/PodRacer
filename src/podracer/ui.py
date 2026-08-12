@@ -2,8 +2,10 @@
 
 Left pane browses the local filesystem (QFileSystemModel), right pane
 is the iPod library. Drag files from anywhere onto the right pane to
-add them; select and press Delete to remove; Eject writes the DB and
-unmounts. A 3-second timer watches for the iPod appearing/disappearing.
+add them; select and press Delete to remove; Sync writes the DB
+without ejecting (adds/deletes only reach the device on sync); Sync &
+Eject writes and unmounts. A 3-second timer watches for the iPod
+appearing/disappearing.
 
 Theme support lands after the layout (themes.py): the window only
 ships a stylesheet hook today.
@@ -267,10 +269,20 @@ class MainWindow(QMainWindow):
         self.cancel_button = QPushButton("Cancel", self)
         self.cancel_button.clicked.connect(self._cancel_add)
         self.cancel_button.hide()
-        self.eject_button = QPushButton("Eject", self)
+        self.eject_button = QPushButton("Sync & Eject", self)
         self.eject_button.clicked.connect(self._eject)
         self.eject_button.setEnabled(False)
-        self.eject_button.setToolTip("Write the library to the iPod and unmount it.")
+        self.eject_button.setToolTip(
+            "Write the library to the iPod, then unmount it. "
+            "Safe to unplug after this."
+        )
+        self.sync_button = QPushButton("Sync", self)
+        self.sync_button.clicked.connect(self._sync)
+        self.sync_button.setEnabled(False)
+        self.sync_button.setToolTip(
+            "Write the library to the iPod now, without ejecting. "
+            "Adds and removes only reach the device when you sync."
+        )
         self.remove_button = QPushButton("Remove", self)
         self.remove_button.clicked.connect(self._remove_selected)
         self.remove_button.setEnabled(False)
@@ -298,6 +310,7 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.progress)
         self.statusBar().addPermanentWidget(self.cancel_button)
         self.statusBar().addPermanentWidget(self.remove_button)
+        self.statusBar().addPermanentWidget(self.sync_button)
         self.statusBar().addPermanentWidget(self.eject_button)
         self.statusBar().addPermanentWidget(self.theme_button)
         self.statusBar().addPermanentWidget(self.font_button)
@@ -458,11 +471,13 @@ class MainWindow(QMainWindow):
             suffix = f"  ·  {free / 2**30:.1f} GiB free" if free else ""
             self.track_count.setText(f"{len(self.session.tracks)} tracks{suffix}")
             self.eject_button.setEnabled(True)
+            self.sync_button.setEnabled(True)
             self.setWindowTitle(f"PodRacer — {self.session.device_name}")
         else:
             self.device_label.setText("No iPod — click to find")
             self.track_count.setText("")
             self.eject_button.setEnabled(False)
+            self.sync_button.setEnabled(False)
             self.setWindowTitle("PodRacer")
 
     # -- filesystem pane -------------------------------------------------
@@ -508,6 +523,7 @@ class MainWindow(QMainWindow):
         self.progress.show()
         self.cancel_button.show()
         self.eject_button.setEnabled(False)
+        self.sync_button.setEnabled(False)
         self._worker.start()
 
     def _on_file_started(self, path: str) -> None:
@@ -535,6 +551,7 @@ class MainWindow(QMainWindow):
         self.progress.hide()
         self.cancel_button.hide()
         self.eject_button.setEnabled(self.session is not None)
+        self.sync_button.setEnabled(self.session is not None)
         self.tracks_model.set_session(self.session)
         self._refresh_after_change()
         self._worker = None
@@ -584,6 +601,17 @@ class MainWindow(QMainWindow):
         menu.exec(self.lib_view.viewport().mapToGlobal(pos))
 
     # -- eject ------------------------------------------------------------
+
+    def _sync(self) -> None:
+        if self.session is None or self._worker is not None:
+            return
+        self._status("Writing library…")
+        try:
+            self.session.sync()
+        except device.DeviceError as exc:
+            self._status(f"Sync problem: {exc}")
+            return
+        self._status("Synced. iPod stays mounted.")
 
     def _eject(self) -> None:
         if self.session is None or self._worker is not None:
