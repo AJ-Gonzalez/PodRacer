@@ -464,16 +464,26 @@ class MainWindow(QMainWindow):
             return
         self._worker = AddWorker(self.session, sources)
         self._worker.fileStarted.connect(self._on_file_started)
+        self._worker.fileDone.connect(self._on_file_done)
         self._worker.finishedAll.connect(self._on_add_finished)
-        self.progress.setRange(0, len(sources))
-        self.progress.setValue(0)
+        self._add_total = len(sources)
+        self._add_done = 0
+        # Indeterminate: a single flac transcode can take minutes, and
+        # a determinate bar sitting at 0/N reads as hung.
+        self.progress.setRange(0, 0)
         self.progress.show()
         self.cancel_button.show()
         self.eject_button.setEnabled(False)
         self._worker.start()
 
     def _on_file_started(self, path: str) -> None:
-        self._status(f"Adding {Path(path).name} …")
+        self._status(
+            f"Adding {Path(path).name} ({self._add_done + 1}/{self._add_total}) …"
+        )
+
+    def _on_file_done(self, _result) -> None:
+        self._add_done += 1
+        self._status(f"{self._add_done}/{self._add_total} files done.")
 
     def _on_add_finished(self, results: list[AddResult]) -> None:
         added = sum(1 for r in results if r.status == "added")

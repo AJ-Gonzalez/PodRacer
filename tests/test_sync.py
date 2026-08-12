@@ -90,6 +90,36 @@ class SyncSessionTests(unittest.TestCase):
         self.assertEqual(len(back.tracks), 137)
         self.assertEqual(back.tracks[-1].title, "Eject Me")
 
+    def test_add_from_worker_thread_completes(self):
+        # Regression: the sidecar connection is used from the add
+        # worker thread; a cross-thread sqlite error used to kill the
+        # thread silently and hang the progress bar forever.
+        import subprocess
+        import threading
+
+        src = Path(self.tmp.name) / "lossless.flac"
+        subprocess.run(
+            ["ffmpeg", "-nostdin", "-y", "-f", "lavfi", "-i",
+             "sine=frequency=440:duration=1", str(src)],
+            capture_output=True, check=True,
+        )
+        results: list = []
+        error: list = []
+
+        def run() -> None:
+            try:
+                results.append(self.session.add(src))
+            except Exception as exc:  # noqa: BLE001
+                error.append(exc)
+
+        thread = threading.Thread(target=run)
+        thread.start()
+        thread.join(timeout=60)
+        self.assertFalse(thread.is_alive(), "add thread hung")
+        self.assertEqual(error, [])
+        self.assertEqual(results[0].status, "added")
+        self.assertEqual(len(self.session.tracks), 137)
+
 
 def _make_mp3(path: Path, title: str) -> None:
     import subprocess

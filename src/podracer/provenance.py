@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import os
 import sqlite3
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -47,17 +48,25 @@ CREATE TABLE IF NOT EXISTS device_files (
 
 
 class ProvenanceDB:
-    """Thin wrapper over the sidecar sqlite file."""
+    """Thin wrapper over the sidecar sqlite file.
+
+    Thread-safe: the connection is created with check_same_thread=False
+    because the add pipeline runs in a worker thread while the UI
+    thread owns the session; a lock serializes all access.
+    """
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(str(self.path))
-        self.conn.executescript(_SCHEMA)
-        self.conn.commit()
+        self._lock = threading.RLock()
+        self.conn = sqlite3.connect(str(self.path), check_same_thread=False)
+        with self._lock:
+            self.conn.executescript(_SCHEMA)
+            self.conn.commit()
 
     def close(self) -> None:
-        self.conn.close()
+        with self._lock:
+            self.conn.close()
 
     def __enter__(self) -> "ProvenanceDB":
         return self
@@ -65,12 +74,20 @@ class ProvenanceDB:
     def __exit__(self, *exc) -> None:
         self.close()
 
+    def _execute(self, sql: str, params=()) -> sqlite3.Cursor:
+        with self._lock:
+            return self.conn.execute(sql, params)
+
+    def _commit(self) -> None:
+        with self._lock:
+            self.conn.commit()
+
     # -- sources --------------------------------------------------------
 
     def source_digest(self, source_path: str, size: int, mtime: float) -> str | None:
         """The cached sha256 of @source_path, or None if the file is
         unknown or changed (size/mtime no longer match)."""
-        row = self.conn.execute(
+        row = self._execute(
             "SELECT sha256, size, mtime FROM provenance WHERE source_path = ?",
             (source_path,),
         ).fetchone()
@@ -83,37 +100,37 @@ class ProvenanceDB:
     def remember_source(
         self, source_path: str, size: int, mtime: float, sha256: str
     ) -> None:
-        self.conn.execute(
+        self._execute(
             "INSERT OR REPLACE INTO provenance (source_path, size, mtime, sha256, added)"
             " VALUES (?, ?, ?, ?, ?)",
             (source_path, size, mtime, sha256, int(time.time())),
         )
-        self.conn.commit()
+        self._commit()
 
     # -- device files ---------------------------------------------------
 
     def device_has_digest(self, sha256: str) -> bool:
-        row = self.conn.execute(
+        row = self._execute(
             "SELECT 1 FROM device_files WHERE sha256 = ?", (sha256,)
         ).fetchone()
         return row is not None
 
     def remember_device_file(self, ipod_path: str, sha256: str) -> None:
-        self.conn.execute(
+        self._execute(
             "INSERT OR REPLACE INTO device_files (ipod_path, sha256, added)"
             " VALUES (?, ?, ?)",
             (ipod_path, sha256, int(time.time())),
         )
-        self.conn.commit()
+        self._commit()
 
     def forget_device_file(self, ipod_path: str) -> None:
-        self.conn.execute(
+        self._execute(
             "DELETE FROM device_files WHERE ipod_path = ?", (ipod_path,)
         )
-        self.conn.commit()
+        self._commit()
 
     def device_files_count(self) -> int:
-        return self.conn.execute("SELECT COUNT(*) FROM device_files").fetchone()[0]
+        return self._execute("SELECT COUNT(*) FROM device_files").fetchone()[0]
 
 
 def default_db_path() -> Path:
