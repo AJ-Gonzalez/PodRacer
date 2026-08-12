@@ -211,6 +211,22 @@ class MainWindow(QMainWindow):
         self.lib_view.setDropIndicatorShown(True)
         self.lib_view.filesDropped.connect(self._files_dropped)
         self.lib_view.deleteRequested.connect(self._remove_selected)
+        # Discoverability: the Delete key alone is invisible. Right-click
+        # opens a context menu; a status-bar Remove button enables with
+        # the selection. Both say what they do (product tenet).
+        self.lib_view.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.lib_view.customContextMenuRequested.connect(
+            self._show_lib_context_menu
+        )
+        self.lib_view.setToolTip(
+            "Drag songs here to add them to the iPod.\n"
+            "Select songs, then press Delete or right-click to remove."
+        )
+        self.lib_view.selectionModel().selectionChanged.connect(
+            self._selection_changed
+        )
         self.lib_view.horizontalHeader().setSectionResizeMode(
             0, QHeaderView.ResizeMode.Stretch
         )
@@ -255,6 +271,12 @@ class MainWindow(QMainWindow):
         self.eject_button.clicked.connect(self._eject)
         self.eject_button.setEnabled(False)
         self.eject_button.setToolTip("Write the library to the iPod and unmount it.")
+        self.remove_button = QPushButton("Remove", self)
+        self.remove_button.clicked.connect(self._remove_selected)
+        self.remove_button.setEnabled(False)
+        self.remove_button.setToolTip(
+            "Remove the selected songs from the iPod (keyboard: Delete)."
+        )
         self.theme_button = QPushButton("Theme", self)
         self.theme_button.setToolTip("Switch the look of PodRacer (instant).")
         self.theme_button.clicked.connect(self._show_theme_menu)
@@ -275,6 +297,7 @@ class MainWindow(QMainWindow):
         self.statusBar().addWidget(self.track_count)
         self.statusBar().addPermanentWidget(self.progress)
         self.statusBar().addPermanentWidget(self.cancel_button)
+        self.statusBar().addPermanentWidget(self.remove_button)
         self.statusBar().addPermanentWidget(self.eject_button)
         self.statusBar().addPermanentWidget(self.theme_button)
         self.statusBar().addPermanentWidget(self.font_button)
@@ -541,6 +564,24 @@ class MainWindow(QMainWindow):
             self.session.remove(track)
         self.tracks_model.set_session(self.session)
         self._refresh_after_change()
+
+    def _selection_changed(self) -> None:
+        has_selection = bool(self.lib_view.selectionModel().selectedRows())
+        self.remove_button.setEnabled(has_selection)
+
+    def _show_lib_context_menu(self, pos) -> None:
+        index = self.lib_view.indexAt(pos)
+        if index.isValid():
+            row = index.row()
+            selected = self.lib_view.selectionModel().selectedRows()
+            if row not in {i.row() for i in selected}:
+                self.lib_view.clearSelection()
+                self.lib_view.selectRow(row)
+        menu = QMenu(self)
+        remove = menu.addAction("Remove from iPod")
+        remove.setEnabled(bool(self.lib_view.selectionModel().selectedRows()))
+        remove.triggered.connect(self._remove_selected)
+        menu.exec(self.lib_view.viewport().mapToGlobal(pos))
 
     # -- eject ------------------------------------------------------------
 
