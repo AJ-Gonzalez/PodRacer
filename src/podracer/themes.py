@@ -71,6 +71,7 @@ class Theme:
     text_on_accent: str = "#ffffff"
     status_bg: str = "rgba(12, 10, 26, 0.35)"    # translucent over the gradient
     status_text: str = "#ffffff"
+    header_text: str = "#ffffff"                  # text on the header gradient
     header_gradient: tuple[str, str] = ("#723c70", "#455e89")
     # Derived roles; empty means "compute from accent".
     button_to: str = ""                          # second gradient stop
@@ -110,7 +111,7 @@ QTreeView::item:hover, QTableView::item:hover {{ background: {hover}; }}
 QHeaderView::section {{
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
         stop:0 {h1}, stop:1 {h2});
-    color: #ffffff;
+    color: {self.header_text};
     border: none;
     border-right: 1px solid rgba(255, 255, 255, 0.18);
     padding: 5px 8px;
@@ -155,7 +156,7 @@ QProgressBar {{
     background: rgba(255, 255, 255, 0.25);
     border: none;
     border-radius: 4px;
-    color: #ffffff;
+    color: {self.text_on_accent};
     text-align: center;
 }}
 QProgressBar::chunk {{
@@ -278,7 +279,36 @@ def grey_moonlight() -> Theme:
     )
 
 
-THEMES: list[Theme] = [magenta_daydream(), grey_moonlight()]
+def zen_garden() -> Theme:
+    """Zen Garden: sage -> pale-sage sweep, cream panels, sand accent.
+
+    Palette as given by the user. Sand is a light warm color, so the
+    accent carries dark text (white on sand fails AA); panel text is
+    derived dark-warm; the header gradient is sage -> sand with dark
+    text for the same reason.
+    """
+    return Theme(
+        name="Zen Garden",
+        colors={
+            "sage": "#8fa28a",
+            "pale-sage": "#c7d3c0",
+            "cream": "#f7f4ed",
+            "sand": "#c8a96b",
+        },
+        window_gradient=("#8fa28a", "#c7d3c0"),
+        accent="#c8a96b",               # sand: dark text clears AA
+        accent2="#8fa28a",              # sage
+        panel_bg="#f7f4ed",             # cream
+        panel_text="#3a382f",           # derived dark-warm
+        text_on_accent="#33302a",       # derived dark-warm
+        status_bg="rgba(255, 255, 255, 0.35)",
+        status_text="#33302a",
+        header_gradient=("#8fa28a", "#c8a96b"),
+        header_text="#33302a",
+    )
+
+
+THEMES: list[Theme] = [magenta_daydream(), grey_moonlight(), zen_garden()]
 
 
 def apply_theme(app, theme: Theme) -> None:
@@ -292,3 +322,4 @@ def theme_by_name(name: str) -> Theme:
         if theme.name == name:
             return theme
     raise KeyError(name)
+
