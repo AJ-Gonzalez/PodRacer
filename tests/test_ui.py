@@ -12,11 +12,23 @@ from pathlib import Path
 
 from PySide6.QtCore import QEvent, QMimeData, QPointF, Qt, QUrl
 from PySide6.QtGui import QDropEvent, QKeyEvent
-from PySide6.QtWidgets import QApplication, QHeaderView
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QApplication,
+    QHeaderView,
+)
 
+from podracer_db.model import Track
 from podracer.fonts import FONT_OPTIONS, MAX_SIZE, MIN_SIZE
 from podracer.themes import THEMES
-from podracer.ui import LibraryView, MainWindow
+from podracer.ui import LibraryView, MainWindow, TracksModel
+
+
+class _FakeSession:
+    """Duck-typed SyncSession: enough tracks for selection tests."""
+
+    tracks = [Track(title="A"), Track(title="B"), Track(title="C")]
 
 
 class _QtCase(unittest.TestCase):
@@ -84,6 +96,25 @@ class LibraryViewTests(_QtCase):
                           Qt.KeyboardModifier.NoModifier)
         view.keyPressEvent(event)
         self.assertEqual(fired, [])
+
+    def test_ctrl_click_selects_multiple_rows(self):
+        view = LibraryView()
+        model = TracksModel()
+        model.set_session(_FakeSession())
+        view.setModel(model)
+        view.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        view.resize(400, 200)
+        view.show()
+        self.app.processEvents()
+        QTest.mouseClick(view.viewport(), Qt.MouseButton.LeftButton,
+                         Qt.KeyboardModifier.NoModifier,
+                         view.visualRect(model.index(0, 0)).center())
+        QTest.mouseClick(view.viewport(), Qt.MouseButton.LeftButton,
+                         Qt.KeyboardModifier.ControlModifier,
+                         view.visualRect(model.index(2, 0)).center())
+        rows = sorted(i.row() for i in view.selectionModel().selectedRows())
+        self.assertEqual(rows, [0, 2])
 
 
 class LeftPaneTests(_QtCase):
