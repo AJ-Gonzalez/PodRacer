@@ -2,9 +2,10 @@
 
 `add_file()` is the whole add operation in one call: read tags
 (ffprobe), check duplicates (provenance sidecar), copy native formats
-verbatim or transcode to AAC, place the file under iPod_Control/Music,
-build the Track, append it to the library state, and record its digest
-in the sidecar. The DB write happens later, at eject.
+verbatim or transcode to MP3 (embedded art recompressed), place the
+file under iPod_Control/Music, build the Track, append it to the
+library state, and record its digest in the sidecar. The DB write
+happens later, at eject.
 
 The device does not care about file names — only DB correctness — so
 names are short random codes in F00..F3F, like iTunes' own scheme.
