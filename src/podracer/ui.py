@@ -908,17 +908,30 @@ class MainWindow(QMainWindow):
         buttons = QHBoxLayout()
         remove_btn = QPushButton(f"Remove {len(scan.duplicates)} duplicates")
         remove_btn.setEnabled(bool(scan.duplicates))
-        remove_btn.clicked.connect(lambda: self._remove_hidden_duplicates(box, scan))
+        remove_btn.clicked.connect(
+            lambda: self._remove_hidden_duplicates(box, scan, remove_btn)
+        )
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(box.accept)
         buttons.addWidget(remove_btn)
         buttons.addWidget(close_btn)
+        if scan.duplicates:
+            layout.addWidget(QLabel(
+                "Removal is one pass — a large set can take a few "
+                "seconds, and the window pauses while it works."
+            ))
         layout.addLayout(buttons)
         box.exec()
 
-    def _remove_hidden_duplicates(self, box, scan) -> None:
+    def _remove_hidden_duplicates(self, box, scan, remove_btn) -> None:
         from .orphans import delete_orphans
 
+        # The delete loop blocks the UI thread (one synchronous pass);
+        # flip the button before it so a multi-GB set does not read as
+        # a crash. The repaint forces the change out immediately.
+        remove_btn.setEnabled(False)
+        remove_btn.setText("Removing…")
+        remove_btn.repaint()
         deleted, freed, errors = delete_orphans(scan.duplicates)
         box.accept()
         self._status(
