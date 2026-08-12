@@ -338,7 +338,7 @@ def bubblegum_haze() -> Theme:
 
 
 def hide_and_seek() -> Theme:
-    """Hide and Seek: IKEA-style steel blue on warm off-whites.
+    """Ikea Hide and Seek: IKEA-style steel blue on warm off-whites.
 
     Palette as given by the user. The palette's deepest blue is too
     light for white text (2.5:1), so the accent is a derived deeper
@@ -346,7 +346,7 @@ def hide_and_seek() -> Theme:
     stay on the raw blues with dark text.
     """
     return Theme(
-        name="Hide and Seek",
+        name="Ikea Hide and Seek",
         colors={
             "steel-blue": "#89a8b2",
             "pale-blue-grey": "#b3c8cf",
@@ -367,12 +367,41 @@ def hide_and_seek() -> Theme:
     )
 
 
+def lipstick_hyperfemme() -> Theme:
+    """Lipstick Hyperfemme: hot pink -> lavender sweep, blush panels.
+
+    Palette as given by the user. Hot pink is light, so the accent
+    carries dark plum text (white fails AA); lavender keeps the focus
+    and header roles.
+    """
+    return Theme(
+        name="Lipstick Hyperfemme",
+        colors={
+            "lipstick-pink": "#ff78c4",
+            "lavender": "#e1aeff",
+            "blush": "#ffbdf7",
+            "pale-pink": "#ffecec",
+        },
+        window_gradient=("#ff78c4", "#e1aeff"),
+        accent="#ff78c4",               # hot pink: dark text clears AA
+        accent2="#e1aeff",              # lavender
+        panel_bg="#ffecec",             # pale pink
+        panel_text="#3a1f33",           # derived dark plum
+        text_on_accent="#3a1f33",
+        status_bg="rgba(255, 255, 255, 0.35)",
+        status_text="#3a1f33",
+        header_gradient=("#ff78c4", "#e1aeff"),
+        header_text="#3a1f33",
+    )
+
+
 THEMES: list[Theme] = [
     magenta_daydream(),
     grey_moonlight(),
     zen_garden(),
     bubblegum_haze(),
     hide_and_seek(),
+    lipstick_hyperfemme(),
 ]
 
 
