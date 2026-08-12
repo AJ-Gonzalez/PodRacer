@@ -33,10 +33,14 @@ class FontTests(unittest.TestCase):
         apply_font(self.app, "OpenDyslexic3", 1)
         self.assertEqual(self.app.font().pointSize(), MIN_SIZE)
 
-    def test_system_family_keeps_system_font(self):
-        # family "" must not force a family, only the size.
+    def test_system_family_restores_real_system_font(self):
+        # Regression: QFont() copies the CURRENT app font, so switching
+        # back to System must come from QFontDatabase.systemFont().
+        apply_font(self.app, "Comic Neue", 14)
+        self.assertEqual(self.app.font().family(), "Comic Neue")
         apply_font(self.app, "", 11)
         self.assertEqual(self.app.font().pointSize(), 11)
+        self.assertNotEqual(self.app.font().family(), "Comic Neue")
 
     def test_font_change_reaches_styled_widgets(self):
         # Regression: with a stylesheet active, QApplication.setFont

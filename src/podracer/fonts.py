@@ -23,8 +23,8 @@ FONTS = {
     "IBM Plex Mono": ("IBMPlexMono-Regular.ttf", "IBMPlexMono-Bold.ttf"),
 }
 
-# Order shown in the switcher; "" = the system font.
-FONT_OPTIONS = [("System", ""), ("Comic Neue", "Comic Neue"),
+# Order shown in the switcher; "" = the platform's system font.
+FONT_OPTIONS = [("System Font", ""), ("Comic Neue", "Comic Neue"),
                 ("OpenDyslexic3", "OpenDyslexic3"),
                 ("IBM Plex Mono", "IBM Plex Mono")]
 
@@ -46,10 +46,17 @@ def register_fonts() -> None:
             if path.is_file():
                 QFontDatabase.addApplicationFont(str(path))
 def apply_font(app, family: str, size_pt: int) -> None:
-    """Set the application font; the whole UI re-scales instantly."""
-    font = QFont()
+    """Set the application font; the whole UI re-scales instantly.
+
+    family "" means the platform's real system font: a bare QFont()
+    copies the CURRENT application font (so 'back to system' would
+    stay on the previous family), hence QFontDatabase.systemFont().
+    """
     if family:
+        font = QFont()
         font.setFamily(family)
+    else:
+        font = QFontDatabase.systemFont(QFontDatabase.SystemFont.GeneralFont)
     font.setPointSize(max(MIN_SIZE, min(MAX_SIZE, size_pt)))
     app.setFont(font)
     # Qt's stylesheet engine caches each widget's font at polish time
