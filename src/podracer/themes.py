@@ -425,6 +425,35 @@ def butch_cassidy() -> Theme:
     )
 
 
+def analog_sunrise() -> Theme:
+    """Analog Sunrise: sunset orange over deep slate.
+
+    Palette as given by the user. Orange is light, so the accent
+    carries dark text (white fails AA); the header runs the actual
+    sunrise gradient (orange -> slate) with dark text; the cool slate
+    sweep carries the light-grey panels.
+    """
+    return Theme(
+        name="Analog Sunrise",
+        colors={
+            "sunset-orange": "#fe7743",
+            "deep-slate": "#273f4f",
+            "slate-blue": "#447d9b",
+            "light-grey": "#d7d7d7",
+        },
+        window_gradient=("#273f4f", "#447d9b"),
+        accent="#fe7743",               # sunset orange: dark text
+        accent2="#447d9b",              # slate-blue focus
+        panel_bg="#d7d7d7",             # light grey
+        panel_text="#22282e",           # derived cool dark slate
+        text_on_accent="#2b2118",       # derived warm dark
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#e8eaec",          # derived near-white
+        header_gradient=("#fe7743", "#447d9b"),   # the sunrise
+        header_text="#2b2118",
+    )
+
+
 THEMES: list[Theme] = [
     magenta_daydream(),
     grey_moonlight(),
@@ -433,6 +462,7 @@ THEMES: list[Theme] = [
     hide_and_seek(),
     lipstick_hyperfemme(),
     butch_cassidy(),
+    analog_sunrise(),
 ]
 
 
