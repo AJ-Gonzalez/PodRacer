@@ -91,14 +91,17 @@ class Hash58Tests(unittest.TestCase):
 
     def test_hash_written_and_verifies(self):
         out = write_db(parse_db(self.db), firewire_guid=GUID)
-        self.assertEqual(struct.unpack_from("<H", out, 0x30)[0], 0x58)
+        # The device's own DB uses scheme 0x0001, hashed over (see hash58.py)
+        self.assertEqual(struct.unpack_from("<H", out, 0x30)[0], 0x0001)
         stored = out[0x58:0x6C]
         self.assertEqual(compute_hash58(out, GUID), stored)
 
-    def test_scheme_participates_in_hash(self):
+    def test_scheme_byte_participates_in_hash(self):
+        # Changing the stored scheme invalidates the hash: this is why
+        # a 0x58-scheme DB shows an empty library on the nano 3G.
         out = bytearray(write_db(parse_db(self.db), firewire_guid=GUID))
         stored = bytes(out[0x58:0x6C])
-        out[0x30] ^= 0xFF
+        out[0x30] = 0x58
         self.assertNotEqual(compute_hash58(bytes(out), GUID), stored)
 
     def test_bad_guid_rejected(self):

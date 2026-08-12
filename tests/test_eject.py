@@ -1,4 +1,4 @@
-"""Eject protocol tests: dual-file atomic DB write on a fake tree."""
+"""Eject protocol tests: atomic iTunesDB write on a fake tree."""
 
 import tempfile
 import unittest
@@ -26,24 +26,23 @@ class WriteDBsTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def test_writes_both_files_identically(self):
+    def test_writes_itunesdb(self):
         db = write_db(_library(), firewire_guid=GUID)
         write_dbs(self.itunes, db)
-        for name in ("iTunesDB", "iTunesCDB"):
-            path = self.itunes / name
-            self.assertTrue(path.is_file(), name)
-            self.assertEqual(path.read_bytes(), db, name)
+        self.assertEqual((self.itunes / "iTunesDB").read_bytes(), db)
 
-    def test_written_db_parses_and_hashes(self):
+    def test_no_itunescdb_for_classic_devices(self):
+        # The nano 3G never had a backup copy; writing one is
+        # unnecessary churn on a family that does not use it.
+        write_dbs(self.itunes, write_db(_library()))
+        self.assertFalse((self.itunes / "iTunesCDB").exists())
+
+    def test_written_db_parses(self):
         db = write_db(_library(), firewire_guid=GUID)
         write_dbs(self.itunes, db)
         back = parse_db((self.itunes / "iTunesDB").read_bytes())
         self.assertEqual(len(back.tracks), 1)
         self.assertEqual(back.tracks[0].title, "Song")
-        # Backup copy identical -> same content, same hash
-        self.assertEqual(
-            (self.itunes / "iTunesCDB").read_bytes(), db
-        )
 
     def test_no_temp_files_left(self):
         write_dbs(self.itunes, write_db(_library()))

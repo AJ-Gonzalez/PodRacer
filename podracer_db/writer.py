@@ -186,7 +186,7 @@ def _mk_mhbd(w: Writer, lib: Library, children: int) -> None:
     w.u16(lib.unk_0x22)
     w.u64(lib.id_0x24)
     w.u32(0)                       # unk_0x2c
-    w.u16(0)                       # hashing scheme, set by apply_hash58
+    w.u16(0)                       # hashing scheme: stays 0 (nano 3G requires it)
     w.zeros(20)                    # unk_0x32
     w.u16(lib.lang)
     w.u64(lib.pid)

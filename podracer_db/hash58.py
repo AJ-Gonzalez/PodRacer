@@ -7,9 +7,10 @@ HMAC-SHA1 over the whole DB with three header regions zeroed (db_id at
 value derived from the device's FireWire GUID.
 
 Verified against the real device: the DB the previous sync tool wrote
-carries a hash that this implementation reproduces byte-for-byte (its
-scheme byte is 0 rather than 0x58, which the hash covers either way).
-We write 0x58, gtkpod's convention.
+carries a hash that this implementation reproduces byte-for-byte, with
+the scheme byte 0x0001 (part of the hashed content). A scheme-0x58 DB
+(libgpod's convention) shows an empty library on this nano 3G, so we
+write 0x0001 and hash over it, matching the device's own DB exactly.
 """
 
 from __future__ import annotations
@@ -120,12 +121,16 @@ def compute_hash58(db: bytes, firewire_guid: str) -> bytes:
 
 
 def apply_hash58(db: bytes, firewire_guid: str) -> bytes:
-    """Return @db with the scheme field set and the hash58 written.
+    """Return @db with the hash58 written; the scheme byte is set to 1.
 
-    The scheme byte is part of the hashed content (libgpod sets it
-    before computing), so it is written first.
+    The device's own working DB has scheme 0x0001 and its hash covers
+    that value, so the scheme byte is part of the hashed content.
+    libgpod writes 0x58 there and would hash over 0x58 — a DB written
+    that way shows an empty library on this nano 3G (the firmware
+    evidently validates the hash against the scheme byte as stored).
+    Match the device: 0x0001.
     """
     out = bytearray(db)
-    struct.pack_into("<H", out, 0x30, 0x58)          # hashing scheme
+    struct.pack_into("<H", out, 0x30, 0x0001)          # hashing scheme
     out[0x58:0x6C] = compute_hash58(bytes(out), firewire_guid)
     return bytes(out)
