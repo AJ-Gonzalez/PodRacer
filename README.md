@@ -7,7 +7,7 @@
 </td>
 <td>
 
-<pre>
+<pre style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;">
  ____           _ ____                     
 |  _ \ ___   __| |  _ \ __ _  ___ ___ _ __ 
 | |_) / _ \ / _` | |_) / _` |/ __/ _ \ '__|
