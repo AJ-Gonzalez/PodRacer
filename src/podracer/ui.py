@@ -14,6 +14,7 @@ ships a stylesheet hook today.
 from __future__ import annotations
 
 import time
+from datetime import date
 from pathlib import Path
 from PySide6.QtCore import (
     QAbstractTableModel,
@@ -27,6 +28,7 @@ from PySide6.QtCore import (
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QFileDialog,
     QFileSystemModel,
     QHBoxLayout,
     QHeaderView,
@@ -162,12 +164,45 @@ class AddWorker(QThread):
         self.finishedAll.emit(results)
 
 
+class BackupWorker(QThread):
+    """Extracts the library to a folder in the background.
+
+    Signals carry (done, total) so the bar can tick per file; total 0
+    means the phase length is unknown yet.
+    """
+
+    fileStarted = Signal(str)
+    progressMade = Signal(int, int)
+    finishedAll = Signal(object)   # BackupResult
+
+    def __init__(self, session: SyncSession, dest: Path) -> None:
+        super().__init__()
+        self.session = session
+        self.dest = dest
+        self.cancelled = False
+
+    def run(self) -> None:
+        from .backup import backup_collection
+
+        result = backup_collection(
+            self.session.lib, self.session.music_dir, self.dest,
+            guid=self.session.ipod.guid,
+            progress=self._on_progress,
+            cancel=lambda: self.cancelled,
+        )
+        self.finishedAll.emit(result)
+
+    def _on_progress(self, done: int, total: int) -> None:
+        self.progressMade.emit(done, total)
+
+
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.session: SyncSession | None = None
         self._device_key: str | None = None
         self._worker: AddWorker | None = None
+        self._backup_worker: BackupWorker | None = None
         self._last_mount_attempt = 0.0
         # True while the in-memory library differs from what is on the
         # device (adds/deletes since the last Sync / Sync & Eject).
@@ -299,6 +334,13 @@ class MainWindow(QMainWindow):
             "Write the library to the iPod now, without ejecting. "
             "Adds and removes only reach the device when you sync."
         )
+        self.backup_button = QPushButton("Backup…", self)
+        self.backup_button.clicked.connect(self._start_backup)
+        self.backup_button.setEnabled(False)
+        self.backup_button.setToolTip(
+            "Copy the music off the iPod into a folder, "
+            "organized by artist and album."
+        )
         self.remove_button = QPushButton("Remove", self)
         self.remove_button.clicked.connect(self._remove_selected)
         self.remove_button.setEnabled(False)
@@ -338,6 +380,7 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.remove_button)
         self.statusBar().addPermanentWidget(self.sync_button)
         self.statusBar().addPermanentWidget(self.eject_button)
+        self.statusBar().addPermanentWidget(self.backup_button)
         self.statusBar().addPermanentWidget(self.theme_button)
         self.statusBar().addPermanentWidget(self.font_button)
         self.statusBar().addPermanentWidget(self.size_down)
@@ -499,12 +542,14 @@ class MainWindow(QMainWindow):
             self.track_count.setText(f"{len(self.session.tracks)} tracks{suffix}")
             self.eject_button.setEnabled(True)
             self.sync_button.setEnabled(True)
+            self.backup_button.setEnabled(True)
             self.setWindowTitle(f"PodRacer — {self.session.device_name}")
         else:
             self.device_label.setText("No iPod — click to find")
             self.track_count.setText("")
             self.eject_button.setEnabled(False)
             self.sync_button.setEnabled(False)
+            self.backup_button.setEnabled(False)
             self.setWindowTitle("PodRacer")
 
     # -- filesystem pane -------------------------------------------------
@@ -562,6 +607,14 @@ class MainWindow(QMainWindow):
 
     # -- add / remove ----------------------------------------------------
 
+    def _transfer_running(self) -> bool:
+        """An add or backup worker is mid-flight."""
+        if self._worker is not None and self._worker.isRunning():
+            return True
+        if self._backup_worker is not None and self._backup_worker.isRunning():
+            return True
+        return False
+
     def _files_dropped(self, paths: list) -> None:
         if self.session is None:
             self._status("Plug in the iPod first.")
@@ -573,7 +626,7 @@ class MainWindow(QMainWindow):
         self._start_add(sources)
 
     def _start_add(self, sources: list[Path]) -> None:
-        if self._worker is not None and self._worker.isRunning():
+        if self._transfer_running():
             self._status("Already adding files.")
             return
         self._worker = AddWorker(self.session, sources)
@@ -589,6 +642,7 @@ class MainWindow(QMainWindow):
         self.cancel_button.show()
         self.eject_button.setEnabled(False)
         self.sync_button.setEnabled(False)
+        self.backup_button.setEnabled(False)
         self._worker.start()
 
     def _on_file_started(self, path: str) -> None:
@@ -619,6 +673,7 @@ class MainWindow(QMainWindow):
         self.cancel_button.hide()
         self.eject_button.setEnabled(self.session is not None)
         self.sync_button.setEnabled(self.session is not None)
+        self.backup_button.setEnabled(self.session is not None)
         self.tracks_model.set_session(self.session)
         self._refresh_after_change()
         self._worker = None
@@ -626,11 +681,13 @@ class MainWindow(QMainWindow):
     def _cancel_add(self) -> None:
         if self._worker is not None:
             self._worker.cancelled = True
-            self._status("Finishing the current file…")
+        if self._backup_worker is not None:
+            self._backup_worker.cancelled = True
+        self._status("Finishing the current file…")
 
 
     def _remove_selected(self) -> None:
-        if self.session is None or self._worker is not None:
+        if self.session is None or self._transfer_running():
             return
         rows = sorted({i.row() for i in self.lib_view.selectionModel().selectedRows()})
         tracks = [self.tracks_model.track_at(r) for r in rows]
@@ -671,7 +728,7 @@ class MainWindow(QMainWindow):
     # -- eject ------------------------------------------------------------
 
     def _sync(self) -> None:
-        if self.session is None or self._worker is not None:
+        if self.session is None or self._transfer_running():
             return
         self._status("Writing library…")
         try:
@@ -683,7 +740,7 @@ class MainWindow(QMainWindow):
         self._status("Synced. iPod stays mounted.")
 
     def _eject(self) -> None:
-        if self.session is None or self._worker is not None:
+        if self.session is None or self._transfer_running():
             return
         self._status("Writing library…")
         try:
@@ -693,6 +750,55 @@ class MainWindow(QMainWindow):
             return
         self._dirty = False
         self._status("Written. Safe to unplug.")
+
+    def _start_backup(self) -> None:
+        if self.session is None or self._transfer_running():
+            return
+        folder = QFileDialog.getExistingDirectory(
+            self, "Back up the iPod to…", str(Path.home())
+        )
+        if not folder:
+            return
+        dest = Path(folder) / f"PodRacer Backup {date.today():%Y-%m-%d}"
+        self._backup_worker = BackupWorker(self.session, dest)
+        self._backup_worker.progressMade.connect(self._on_backup_progress)
+        self._backup_worker.finishedAll.connect(self._on_backup_finished)
+        self.progress.setRange(0, 0)
+        self.progress.show()
+        self.cancel_button.show()
+        self.eject_button.setEnabled(False)
+        self.sync_button.setEnabled(False)
+        self.backup_button.setEnabled(False)
+        self._status(f"Backing up to {dest}…")
+        self._backup_worker.start()
+
+    def _on_backup_progress(self, done: int, total: int) -> None:
+        if total:
+            self.progress.setRange(0, total)
+            self.progress.setValue(done)
+        self._status(f"Backup {done}/{total or '…'}.")
+
+    def _on_backup_finished(self, result) -> None:
+        self.progress.hide()
+        self.cancel_button.hide()
+        self.eject_button.setEnabled(self.session is not None)
+        self.sync_button.setEnabled(self.session is not None)
+        self.backup_button.setEnabled(self.session is not None)
+        self._backup_worker = None
+        parts = [f"{result.copied} songs"]
+        if result.orphans_copied:
+            parts.append(f"{result.orphans_copied} orphans")
+        if result.orphan_duplicates:
+            parts.append(f"{result.orphan_duplicates} duplicates skipped")
+        if result.duplicate_songs:
+            parts.append(f"{len(result.duplicate_songs)} duplicate songs")
+        if result.missing:
+            parts.append(f"{len(result.missing)} files missing")
+        if result.failed_verify:
+            parts.append(f"{len(result.failed_verify)} checksum FAILED")
+        if result.errors:
+            parts.append(f"{len(result.errors)} errors")
+        self._status("Backup: " + ", ".join(parts) + ".")
 
     # -- helpers -----------------------------------------------------------
 
@@ -705,7 +811,7 @@ class MainWindow(QMainWindow):
     def _quit_action(self) -> str:
         """What closing the window should do: 'close', 'cancel', or
         'sync-then-close'. Kept dialog-free so it is unit-testable."""
-        if self._worker is not None and self._worker.isRunning():
+        if self._transfer_running():
             return "transfer"
         if self._dirty and self.session is not None:
             return "unsynced"
