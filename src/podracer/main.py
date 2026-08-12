@@ -58,6 +58,10 @@ def main() -> int:
         return 1
 
     window = MainWindow()
+    if icon.is_file():
+        # The app icon covers the taskbar; the window needs its own
+        # copy for the title bar on some window managers.
+        window.setWindowIcon(QIcon(str(icon)))
     # The two-pane layout is unusable when small; start maximized.
     window.showMaximized()
 

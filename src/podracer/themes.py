@@ -483,6 +483,64 @@ def insane_default() -> Theme:
     )
 
 
+def frutiger_aero() -> Theme:
+    """Frutiger Aero: 2000s glossy aqua — deep teal -> bright cyan
+    sweep, icy panels. Light-on-dark headers; white text clears AA on
+    the teal accent (5.0:1).
+    """
+    return Theme(
+        name="Frutiger Aero",
+        colors={
+            "lagoon": "#0e7490",
+            "reef": "#0b7a8f",
+            "surge": "#0891b2",
+            "spray": "#22d3ee",
+            "mist": "#eef9ff",
+            "abyss": "#0b3a4a",
+            "deepwater": "#083344",
+        },
+        window_gradient=("#0e7490", "#22d3ee"),
+        accent="#0b7a8f",               # reef: white text clears AA
+        accent2="#0891b2",              # surge: focus/borders
+        panel_bg="#eef9ff",             # mist
+        panel_text="#0b3a4a",           # abyss
+        text_on_accent="#ffffff",
+        status_bg="rgba(8, 51, 68, 0.45)",   # deepwater haze over the cyan
+        status_text="#eef9ff",               # mist: light clears the teal
+        header_gradient=("#0e7490", "#0b5f74"),
+        header_text="#ffffff",
+        button_to="#0e5f73",            # glossy dark-teal second stop
+    )
+
+
+def aqua() -> Theme:
+    """Aqua: classic OS X pinstripe blues with a glossy blue accent."""
+    return Theme(
+        name="Aqua",
+        colors={
+            "pinstripe": "#7f9fc9",
+            "pale-aqua": "#dfeaf7",
+            "aqua-blue": "#2e6db4",
+            "cobalt": "#1f4f8f",
+            "sky": "#3b7dd8",
+            "cloud": "#f4f6f9",
+            "navy": "#17263a",
+            "ink": "#1c2733",
+        },
+        window_gradient=("#7f9fc9", "#dfeaf7"),
+        accent="#2e6db4",               # aqua blue: white text clears AA
+        accent2="#3b7dd8",              # sky: focus/borders
+        panel_bg="#f4f6f9",             # cloud
+        panel_text="#1c2733",           # ink
+        text_on_accent="#ffffff",
+        status_bg="rgba(255, 255, 255, 0.45)",
+        status_text="#17263a",          # navy
+        header_gradient=("#2e6db4", "#1f4f8f"),
+        header_text="#ffffff",
+        button_to="#1f4f8f",            # glossy blue second stop
+    )
+
+
 THEMES: list[Theme] = [
     magenta_daydream(),
     grey_moonlight(),
@@ -493,6 +551,8 @@ THEMES: list[Theme] = [
     butch_cassidy(),
     analog_sunrise(),
     insane_default(),
+    frutiger_aero(),
+    aqua(),
 ]
 
 
