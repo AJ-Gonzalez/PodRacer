@@ -3,8 +3,9 @@
 A Theme is a named palette plus the role mapping that turns it into a
 stylesheet. `apply_theme()` re-skins the running app instantly, so the
 status-bar switcher is a real one-click flip. Themes are added one at
-a time as plain palette data (see magenta_daydream below); the QSS
-template is shared.
+a time as plain palette data (see magenta_daydream / grey_moonlight);
+the QSS template is shared and role-driven, so a theme only supplies
+colors, never styling.
 
 Contrast discipline: body text pairs must reach WCAG AA (>= 4.5:1);
 the tests check every theme's text-on-panel and text-on-accent pairs.
@@ -13,7 +14,7 @@ the tests check every theme's text-on-panel and text-on-accent pairs.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from PySide6.QtGui import QColor, QPalette
 
@@ -30,11 +31,24 @@ def _rgb(hex_color: str) -> tuple[int, int, int]:
     )
 
 
+def darken(hex_color: str, factor: float = 0.82) -> str:
+    """Scale a hex color toward black; keeps hue for pressed states."""
+    r, g, b = _rgb(hex_color)
+    return f"#{int(r * factor):02x}{int(g * factor):02x}{int(b * factor):02x}"
+
+
+def rgba_of(hex_color: str, alpha: float) -> str:
+    r, g, b = _rgb(hex_color)
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
+
 def relative_luminance(hex_color: str) -> float:
     """WCAG relative luminance of a #rrggbb color."""
     r, g, b = (c / 255 for c in _rgb(hex_color))
+
     def linear(channel: float) -> float:
         return channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4
+
     return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b)
 
 
@@ -58,10 +72,22 @@ class Theme:
     status_bg: str = "rgba(12, 10, 26, 0.35)"    # translucent over the gradient
     status_text: str = "#ffffff"
     header_gradient: tuple[str, str] = ("#723c70", "#455e89")
+    # Derived roles; empty means "compute from accent".
+    button_to: str = ""                          # second gradient stop
+    button_pressed: str = ""                     # pressed state
+    hover_tint: str = ""                         # item hover wash
+    alternate_tint: str = ""                     # row striping
+
+    def _role(self, value: str, default: str) -> str:
+        return value or default
 
     def qss(self) -> str:
         from_, to_ = self.window_gradient
         h1, h2 = self.header_gradient
+        button_to = self._role(self.button_to, darken(self.accent))
+        pressed = self._role(self.button_pressed, darken(self.accent, 0.55))
+        hover = self._role(self.hover_tint, rgba_of(self.accent, 0.12))
+        alternate = self._role(self.alternate_tint, rgba_of(self.accent, 0.08))
         return f"""
 QMainWindow {{
     background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
@@ -72,16 +98,14 @@ QSplitter::handle:hover {{ background: rgba(255, 255, 255, 0.35); }}
 
 QTreeView, QTableView {{
     background: {self.panel_bg};
-    alternate-background-color: rgba(92, 77, 125, 0.08);
+    alternate-background-color: {alternate};
     color: {self.panel_text};
     border: none;
-    gridline-color: rgba(69, 94, 137, 0.25);
+    gridline-color: rgba(127, 127, 140, 0.25);
     selection-background-color: {self.accent};
     selection-color: {self.text_on_accent};
 }}
-QTreeView::item:hover, QTableView::item:hover {{
-    background: rgba(183, 9, 76, 0.12);
-}}
+QTreeView::item:hover, QTableView::item:hover {{ background: {hover}; }}
 
 QHeaderView::section {{
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
@@ -105,15 +129,14 @@ QLineEdit:focus {{ border: 1px solid {self.accent}; }}
 
 QPushButton {{
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-        stop:0 {self.accent}, stop:1 {self.colors['dark-raspberry']});
+        stop:0 {self.accent}, stop:1 {button_to});
     color: {self.text_on_accent};
     border: 1px solid rgba(255, 255, 255, 0.30);
     border-radius: 6px;
     padding: 4px 12px;
 }}
-QPushButton:hover {{ background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-    stop:0 #d2165d, stop:1 {self.accent}); }}
-QPushButton:pressed {{ background: {self.colors['royal-plum']}; }}
+QPushButton:hover {{ background: {rgba_of(self.accent, 0.85)}; }}
+QPushButton:pressed {{ background: {pressed}; }}
 QPushButton:disabled {{
     background: rgba(255, 255, 255, 0.25);
     color: rgba(255, 255, 255, 0.6);
@@ -150,13 +173,13 @@ QStatusBar::item {{ border: none; }}
 QMenu {{
     background: {self.panel_bg};
     color: {self.panel_text};
-    border: 1px solid {self.colors['dusty-grape']};
+    border: 1px solid {self.accent2};
     border-radius: 6px;
     padding: 4px;
 }}
 QMenu::item {{ padding: 5px 24px 5px 10px; border-radius: 4px; }}
 QMenu::item:selected {{ background: {self.accent}; color: {self.text_on_accent}; }}
-QMenu::item:checked {{ background: {self.colors['velvet-purple']}; color: #ffffff; }}
+QMenu::item:checked {{ background: {pressed}; color: {self.text_on_accent}; }}
 
 QToolTip {{
     background: {self.panel_bg};
@@ -175,18 +198,17 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
 
     def palette(self) -> QPalette:
         pal = QPalette()
-        window = QColor(self.window_gradient[0])
-        pal.setColor(QPalette.ColorRole.Window, window)
+        pal.setColor(QPalette.ColorRole.Window, QColor(self.window_gradient[0]))
         pal.setColor(QPalette.ColorRole.WindowText, QColor(self.status_text))
         pal.setColor(QPalette.ColorRole.Base, QColor(self.panel_bg))
-        pal.setColor(QPalette.ColorRole.AlternateBase, QColor(self.colors["dusty-grape"]))
+        pal.setColor(QPalette.ColorRole.AlternateBase, QColor(self.accent))
         pal.setColor(QPalette.ColorRole.Text, QColor(self.panel_text))
         pal.setColor(QPalette.ColorRole.Button, QColor(self.accent))
         pal.setColor(QPalette.ColorRole.ButtonText, QColor(self.text_on_accent))
         pal.setColor(QPalette.ColorRole.Highlight, QColor(self.accent))
         pal.setColor(QPalette.ColorRole.HighlightedText, QColor(self.text_on_accent))
         pal.setColor(QPalette.ColorRole.Link, QColor(self.accent2))
-        pal.setColor(QPalette.ColorRole.PlaceholderText, QColor(self.colors["dusty-grape"]))
+        pal.setColor(QPalette.ColorRole.PlaceholderText, QColor(self.accent2))
         pal.setColor(QPalette.ColorRole.ToolTipBase, QColor(self.panel_bg))
         pal.setColor(QPalette.ColorRole.ToolTipText, QColor(self.panel_text))
         return pal
@@ -196,8 +218,8 @@ def magenta_daydream() -> Theme:
     """Magenta Daydream: cherry-rose -> pacific-cyan sweep.
 
     Palette as given by the user; panel colors adjusted for contrast
-    (near-white panels carry dark plum text; accents keep >= 4.5:1
-    with white text; cyan is used for borders/links, not body text).
+    (near-white panels carry dark plum text; cyan is used for
+    borders/links, not body text).
     """
     return Theme(
         name="Magenta Daydream",
@@ -218,10 +240,45 @@ def magenta_daydream() -> Theme:
         panel_bg="#fdf6fa",
         panel_text="#2b1420",
         header_gradient=("#723c70", "#455e89"),
+        button_to="#a01a58",           # dark-raspberry, the original pair
+        button_pressed="#892b64",      # royal-plum
     )
 
 
-THEMES: list[Theme] = [magenta_daydream()]
+def grey_moonlight() -> Theme:
+    """Grey Moonlight: onyx -> graphite monochrome sweep.
+
+    Palette as given by the user; panel text added for contrast (the
+    palette has no light color), white-tinted hovers/rows so the dark
+    surfaces stay readable.
+    """
+    return Theme(
+        name="Grey Moonlight",
+        colors={
+            "onyx": "#131316",
+            "shadow-grey": "#1c1c21",
+            "shadow-grey-2": "#26262c",
+            "graphite": "#2f3037",
+            "gunmetal": "#393a41",
+            "charcoal": "#4b4c52",
+            "charcoal-2": "#5b5c62",
+            "dim-grey": "#6a6b70",
+        },
+        window_gradient=("#131316", "#2f3037"),
+        accent="#5b5c62",              # charcoal-2: white text clears AA
+        accent2="#6a6b70",             # dim-grey
+        panel_bg="#1c1c21",            # shadow-grey
+        panel_text="#e9e9ee",          # derived: no light color in palette
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#e9e9ee",
+        header_gradient=("#26262c", "#393a41"),
+        hover_tint="rgba(255, 255, 255, 0.08)",
+        alternate_tint="rgba(255, 255, 255, 0.04)",
+    )
+
+
+THEMES: list[Theme] = [magenta_daydream(), grey_moonlight()]
 
 
 def apply_theme(app, theme: Theme) -> None:
