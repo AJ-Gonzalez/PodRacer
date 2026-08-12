@@ -10,8 +10,19 @@ from __future__ import annotations
 import shutil
 import sys
 
+import sys
+from pathlib import Path
+
 from PySide6.QtCore import QTimer
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
+
+
+def _icon_path() -> Path:
+    meipass = getattr(sys, "_MEIPASS", None)  # PyInstaller onefile temp dir
+    if meipass:
+        return Path(meipass) / "podracer" / "assets" / "podracer_icon.png"
+    return Path(__file__).resolve().parent / "assets" / "podracer_icon.png"
 
 # Absolute import: this file also runs as a bare script inside the
 # onefile bundle, where relative imports have no parent package.
@@ -27,6 +38,9 @@ def main() -> int:
     # across desktops; the status-bar Theme button re-skins live.
     app.setStyle("Fusion")
     apply_theme(app, THEMES[0])
+    icon = _icon_path()
+    if icon.is_file():
+        app.setWindowIcon(QIcon(str(icon)))
 
     if not shutil.which("ffmpeg"):
         QMessageBox.critical(

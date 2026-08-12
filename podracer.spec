@@ -5,7 +5,7 @@ a = Analysis(
     ['src/podracer/main.py'],
     pathex=['src'],
     binaries=[],
-    datas=[('src/podracer/fonts', 'podracer/fonts')],
+    datas=[('src/podracer/fonts', 'podracer/fonts'), ('src/podracer/assets', 'podracer/assets')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
