@@ -1,5 +1,21 @@
 # PodRacer
+<table>
+<tr>
+<td>
 
+<img src="src/podracer/assets/podracer_icon.png" width="100" height="100" alt="PodRacer logo">
+</td>
+<td>
+```
+ ____           _ ____                     
+|  _ \ ___   __| |  _ \ __ _  ___ ___ _ __ 
+| |_) / _ \ / _` | |_) / _` |/ __/ _ \ '__|
+|  __/ (_) | (_| |  _ < (_| | (_|  __/ |   
+|_|   \___/ \__,_|_| \_\__,_|\___\___|_|  
+```
+</td>
+</tr>
+</table>
 Transfer music to an iPod from Linux without iTunes. 
 
 **Plug in the iPod, open PodRacer, drag music over.**
