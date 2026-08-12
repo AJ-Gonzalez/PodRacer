@@ -337,11 +337,41 @@ def bubblegum_haze() -> Theme:
     )
 
 
+def hide_and_seek() -> Theme:
+    """Hide and Seek: IKEA-style steel blue on warm off-whites.
+
+    Palette as given by the user. The palette's deepest blue is too
+    light for white text (2.5:1), so the accent is a derived deeper
+    steel (#5d7279, white text 5.1:1) — the IKEA signature. Headers
+    stay on the raw blues with dark text.
+    """
+    return Theme(
+        name="Hide and Seek",
+        colors={
+            "steel-blue": "#89a8b2",
+            "pale-blue-grey": "#b3c8cf",
+            "warm-grey": "#e5e1da",
+            "cream": "#f1f0e8",
+        },
+        window_gradient=("#89a8b2", "#b3c8cf"),
+        accent="#5d7279",               # derived deeper steel: white text
+        accent2="#89a8b2",              # steel-blue focus borders
+        panel_bg="#f1f0e8",             # IKEA off-white
+        panel_text="#2f3233",           # derived dark warm-grey
+        text_on_accent="#ffffff",
+        status_bg="rgba(255, 255, 255, 0.35)",
+        status_text="#2f3233",
+        header_gradient=("#89a8b2", "#b3c8cf"),
+        header_text="#2f3233",
+    )
+
+
 THEMES: list[Theme] = [
     magenta_daydream(),
     grey_moonlight(),
     zen_garden(),
     bubblegum_haze(),
+    hide_and_seek(),
 ]
 
 
