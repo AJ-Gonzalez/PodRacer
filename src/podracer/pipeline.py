@@ -29,6 +29,29 @@ from .provenance import ProvenanceDB, check_duplicate
 # Extensions the nano 3G plays as-is; everything else is transcoded.
 NATIVE_EXTENSIONS = frozenset({".mp3", ".m4a", ".aac", ".wav", ".aiff", ".aif"})
 
+# Everything we will copy or transcode when files/folders are dropped.
+AUDIO_EXTENSIONS = NATIVE_EXTENSIONS | frozenset(
+    {".flac", ".ogg", ".opus", ".wma", ".ape", ".m4b"}
+)
+
+
+def collect_audio(sources: list[Path]) -> list[Path]:
+    """Expand a drop (files and folders) to a sorted audio-file list.
+
+    Folders are walked recursively; non-audio files are ignored; the
+    result is deduplicated and sorted so the add order is stable.
+    """
+    found: set[Path] = set()
+    for source in sources:
+        if source.is_dir():
+            found.update(
+                p for p in source.rglob("*")
+                if p.is_file() and p.suffix.lower() in AUDIO_EXTENSIONS
+            )
+        elif source.is_file() and source.suffix.lower() in AUDIO_EXTENSIONS:
+            found.add(source)
+    return sorted(found, key=lambda p: str(p).casefold())
+
 # Transcode target: AAC 256 kbps, all streams mapped so embedded cover
 # art survives; audio re-encoded, video (cover) copied.
 TRANSCODE_ARGS = [

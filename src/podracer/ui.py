@@ -42,7 +42,7 @@ from PySide6.QtWidgets import (
 )
 from . import device
 from .fonts import FONT_OPTIONS, MAX_SIZE, MIN_SIZE, apply_font, register_fonts
-from .pipeline import AddResult
+from .pipeline import AddResult, collect_audio
 from .sync import SyncSession
 from .themes import THEMES, apply_theme
 from podracer_db.model import Track
@@ -415,9 +415,11 @@ class MainWindow(QMainWindow):
         if self.session is None:
             self._status("Plug in the iPod first.")
             return
-        sources = [Path(u.toLocalFile()) for u in event.mimeData().urls()
-                   if u.isLocalFile() and Path(u.toLocalFile()).is_file()]
+        dropped = [Path(u.toLocalFile()) for u in event.mimeData().urls()
+                   if u.isLocalFile() and Path(u.toLocalFile()).exists()]
+        sources = collect_audio(dropped)
         if not sources:
+            self._status("No music files in that drop.")
             return
         self._start_add(sources)
 

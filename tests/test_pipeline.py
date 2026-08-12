@@ -129,5 +129,38 @@ class AddFileTests(unittest.TestCase):
             self.assertRegex(name, r"^[A-Z0-9]{4}\.mp3$")
 
 
+class CollectAudioTests(unittest.TestCase):
+    def test_walks_folders_and_filters(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "a" / "deep").mkdir(parents=True)
+            (root / "b").mkdir()
+            song1 = root / "a" / "one.mp3"
+            song2 = root / "a" / "deep" / "two.FLAC"
+            song3 = root / "b" / "three.ogg"
+            for p in (song1, song2, song3):
+                p.write_bytes(b"x")
+            (root / "a" / "notes.txt").write_text("not music")
+            (root / "b" / "cover.jpg").write_bytes(b"img")
+
+            found = pipeline.collect_audio([root / "a", root / "b"])
+            self.assertEqual(found, [song2, song1, song3])  # stable sorted order
+
+    def test_single_file_and_dedupe(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            song = root / "s.mp3"
+            song.write_bytes(b"x")
+            # same file dropped twice via folder + file -> deduped
+            found = pipeline.collect_audio([root, song])
+            self.assertEqual(found, [song])
+
+    def test_non_audio_drop_is_empty(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "movie.mp4").write_bytes(b"x")
+            self.assertEqual(pipeline.collect_audio([root]), [])
+
+
 if __name__ == "__main__":
     unittest.main()
