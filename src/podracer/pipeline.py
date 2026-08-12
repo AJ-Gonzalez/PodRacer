@@ -19,15 +19,32 @@ import random
 import shutil
 import string
 import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from podracer_db.model import Track
+from podracer_db.model import MAC_EPOCH_OFFSET, Track
 
 from .provenance import ProvenanceDB, check_duplicate
 
 # Extensions the nano 3G plays as-is; everything else is transcoded.
 NATIVE_EXTENSIONS = frozenset({".mp3", ".m4a", ".aac", ".wav", ".aiff", ".aif"})
+
+# Transcode target: MP3 256 kbps (user decision 2026-08-11: the AAC
+# container also needed a faststart moov; MP3 avoids the whole class).
+# All streams mapped so embedded cover art survives as ID3 APIC.
+TRANSCODE_ARGS = [
+    "ffmpeg", "-nostdin", "-y",
+    "-i", "{src}",
+    "-map", "0",
+    "-c:a", "libmp3lame", "-b:a", "256k",
+    "-c:v", "copy",
+    "-id3v2_version", "3",
+    # Explicit muxer: the temp file name has a .podracer-tmp suffix,
+    # so ffmpeg cannot infer the format from the extension.
+    "-f", "mp3",
+    "{dst}",
+]
 
 # Everything we will copy or transcode when files/folders are dropped.
 AUDIO_EXTENSIONS = NATIVE_EXTENSIONS | frozenset(
@@ -52,19 +69,6 @@ def collect_audio(sources: list[Path]) -> list[Path]:
             found.add(source)
     return sorted(found, key=lambda p: str(p).casefold())
 
-# Transcode target: AAC 256 kbps, all streams mapped so embedded cover
-# art survives; audio re-encoded, video (cover) copied.
-TRANSCODE_ARGS = [
-    "ffmpeg", "-nostdin", "-y",
-    "-i", "{src}",
-    "-map", "0",
-    "-c:a", "aac", "-b:a", "256k",
-    "-c:v", "copy",
-    # Explicit muxer: the temp file name has a .podracer-tmp suffix,
-    # so ffmpeg cannot infer the format from the extension.
-    "-f", "ipod",
-    "{dst}",
-]
 
 # Human filetype strings, matching what iTunes writes in the DB.
 _FILETYPE_NAMES = {
@@ -161,8 +165,20 @@ def ipod_filename(extension: str, used: set[str]) -> str:
             return name
 
 
+def ipod_path_parts(ipod_path: str) -> tuple[str, ...]:
+    """The colon-path elements, ignoring the leading root marker.
+
+    Device paths are root-anchored (':iPod_Control:Music:F00:x.mp3');
+    the empty first element is the marker, not a directory.
+    """
+    parts = ipod_path.split(":")
+    if parts and parts[0] == "":
+        parts = parts[1:]
+    return tuple(parts)
+
+
 def copy_or_transcode(source: str | Path, dest: Path) -> None:
-    """Copy verbatim or transcode to AAC, atomically (temp + rename)."""
+    """Copy verbatim or transcode to MP3, atomically (temp + rename)."""
     source = Path(source)
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_name(dest.name + ".podracer-tmp")
@@ -205,7 +221,7 @@ def add_file(
 
     extension = source.suffix.lower()
     if needs_transcode(source):
-        extension = ".m4a"
+        extension = ".mp3"
 
     used_names = {
         t.ipod_path.rsplit(":", 1)[-1]
@@ -214,7 +230,10 @@ def add_file(
     }
     name = ipod_filename(extension, used_names)
     folder = "F" + format(random.randrange(0, 0x40), "02X")
-    ipod_path = f"iPod_Control:Music:{folder}:{name}"
+    # Device paths are root-anchored: the leading colon is the root
+    # marker. Without it the firmware resolves the path relative and
+    # cannot find the file (track lists, but won't play).
+    ipod_path = f":iPod_Control:Music:{folder}:{name}"
     dest = ipod_dir / folder / name
 
     try:
@@ -232,9 +251,19 @@ def add_file(
     )
     track.mediatype = 1
     track.size = dest.stat().st_size
-    track.remember_playback_position = 1
-    track.mark_unplayed = 0x01
     track.unk126 = 0xFFFF
+    # Every working writer stamps these: unique persistent id (dbid2
+    # mirrors it), mac-epoch add/modify times, samplerate as float.
+    while True:
+        dbid = random.getrandbits(64)
+        if dbid and all(t.dbid != dbid for t in library_tracks):
+            break
+    mac_now = int(time.time()) + MAC_EPOCH_OFFSET
+    track.dbid = dbid
+    track.dbid2 = dbid
+    track.time_added = mac_now
+    track.time_modified = mac_now
+    track.samplerate2 = float(track.samplerate or 0)
 
     digest = hashlib.sha256(dest.read_bytes()).hexdigest()
     db.remember_device_file(ipod_path, digest)

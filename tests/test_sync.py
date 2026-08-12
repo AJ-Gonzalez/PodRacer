@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from podracer import device
+from podracer import device, pipeline
 from podracer.sync import SyncSession
 from podracer_db import parse_db
 
@@ -58,7 +58,7 @@ class SyncSessionTests(unittest.TestCase):
         self.assertEqual(self.session.tracks[-1].title, "New Song")
         # File exists under iPod_Control/Music and is DB-referenced
         file_path = self.session.music_dir.joinpath(
-            *result.track.ipod_path.split(":")[2:]
+            *pipeline.ipod_path_parts(result.track.ipod_path)[2:]
         )
         self.assertTrue(file_path.is_file())
 
@@ -74,7 +74,7 @@ class SyncSessionTests(unittest.TestCase):
         _make_mp3(src, title="Gone")
         result = self.session.add(src)
         track = result.track
-        file_path = self.session.music_dir.joinpath(*track.ipod_path.split(":")[2:])
+        file_path = self.session.music_dir.joinpath(*pipeline.ipod_path_parts(track.ipod_path)[2:])
         self.session.remove(track)
         self.assertFalse(file_path.exists())
         self.assertEqual(len(self.session.tracks), 136)

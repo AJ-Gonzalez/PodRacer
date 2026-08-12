@@ -82,27 +82,35 @@ class AddFileTests(unittest.TestCase):
         track = result.track
         self.assertEqual(track.title, "Native")
         self.assertEqual(track.filetype, "MPEG audio file")
-        self.assertTrue(track.ipod_path.startswith("iPod_Control:Music:F"))
-        file_on_ipod = self.ipod_dir.joinpath(*track.ipod_path.split(":")[2:])
+        # Root-anchored device path (the leading colon is the root
+        # marker; without it the nano cannot find the file).
+        self.assertTrue(track.ipod_path.startswith(":iPod_Control:Music:F"))
+        file_on_ipod = self.ipod_dir.joinpath(*pipeline.ipod_path_parts(track.ipod_path)[2:])
         self.assertTrue(file_on_ipod.is_file())
         self.assertEqual(track.size, file_on_ipod.stat().st_size)
         self.assertEqual(track.filetype_marker, int.from_bytes(b"MP3 ", "little"))
         self.assertIn(track, library)  # appended to library state
         self.assertEqual(self.db.device_files_count(), 1)
+        # Every working writer stamps these (libgpod conventions).
+        self.assertNotEqual(track.dbid, 0)
+        self.assertEqual(track.dbid, track.dbid2)
+        self.assertGreater(track.time_added, 0)
+        self.assertEqual(track.samplerate2, float(track.samplerate))
 
-    def test_add_transcodes_flac_to_m4a(self):
+    def test_add_transcodes_flac_to_mp3(self):
         src = _make_audio(Path(self.tmp.name) / "lossless.flac", "flac",
                           {"title": "Lossless", "artist": "A"})
         result = self._add(src)
         self.assertEqual(result.status, "added")
         track = result.track
-        self.assertTrue(track.ipod_path.endswith(".m4a"))
-        self.assertEqual(track.filetype, "AAC audio file")
-        file_on_ipod = self.ipod_dir.joinpath(*track.ipod_path.split(":")[2:])
+        self.assertTrue(track.ipod_path.endswith(".mp3"))
+        self.assertEqual(track.filetype, "MPEG audio file")
+        file_on_ipod = self.ipod_dir.joinpath(*pipeline.ipod_path_parts(track.ipod_path)[2:])
         self.assertTrue(file_on_ipod.is_file())
         # The transcoded file must itself be playable/parseable audio.
         probed = read_tags(file_on_ipod)
         self.assertEqual(probed.title, "Lossless")
+
 
     def test_content_duplicate_skipped(self):
         src = _make_audio(Path(self.tmp.name) / "same.mp3", "mp3")

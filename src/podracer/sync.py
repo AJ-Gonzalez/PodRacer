@@ -19,7 +19,7 @@ from podracer_db.model import Library, Playlist, Track
 from .device import IPod
 from .eject import eject_ipod as _eject_ipod
 
-from .pipeline import AddResult, add_file
+from .pipeline import AddResult, add_file, ipod_path_parts
 from .provenance import ProvenanceDB, default_db_path
 
 
@@ -65,7 +65,7 @@ class SyncSession:
     def remove(self, track: Track) -> None:
         """Delete a track from the library and the device tree."""
         if track.ipod_path:
-            parts = track.ipod_path.split(":")
+            parts = ipod_path_parts(track.ipod_path)
             if len(parts) == 4:  # iPod_Control:Music:F0X:name
                 file_on_device = self.music_dir / parts[2] / parts[3]
                 file_on_device.unlink(missing_ok=True)
