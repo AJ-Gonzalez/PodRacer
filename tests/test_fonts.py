@@ -38,6 +38,22 @@ class FontTests(unittest.TestCase):
         apply_font(self.app, "", 11)
         self.assertEqual(self.app.font().pointSize(), 11)
 
+    def test_font_change_reaches_styled_widgets(self):
+        # Regression: with a stylesheet active, QApplication.setFont
+        # alone leaves styled widgets stale; apply_font must re-polish.
+        from PySide6.QtWidgets import QTableView
+        from podracer.themes import THEMES, apply_theme
+
+        apply_theme(self.app, THEMES[0])
+        view = QTableView()
+        view.show()
+        self.app.processEvents()
+        apply_font(self.app, "Comic Neue", 17)
+        self.app.processEvents()
+        self.assertEqual(view.font().pointSize(), 17)
+        self.assertEqual(view.font().family(), "Comic Neue")
+        view.close()
+
 
 if __name__ == "__main__":
     unittest.main()

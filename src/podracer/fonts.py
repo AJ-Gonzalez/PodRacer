@@ -45,8 +45,6 @@ def register_fonts() -> None:
             path = _fonts_dir() / name
             if path.is_file():
                 QFontDatabase.addApplicationFont(str(path))
-
-
 def apply_font(app, family: str, size_pt: int) -> None:
     """Set the application font; the whole UI re-scales instantly."""
     font = QFont()
@@ -54,3 +52,9 @@ def apply_font(app, family: str, size_pt: int) -> None:
         font.setFamily(family)
     font.setPointSize(max(MIN_SIZE, min(MAX_SIZE, size_pt)))
     app.setFont(font)
+    # Qt's stylesheet engine caches each widget's font at polish time
+    # and ignores the application-font change for styled widgets.
+    # Re-setting the sheet re-polishes everything against the new font.
+    sheet = app.styleSheet()
+    if sheet:
+        app.setStyleSheet(sheet)
