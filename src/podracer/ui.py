@@ -22,6 +22,7 @@ from PySide6.QtCore import (
     QAbstractTableModel,
     QModelIndex,
     QSettings,
+    QSortFilterProxyModel,
     Qt,
     QThread,
     QTimer,
@@ -51,7 +52,7 @@ from PySide6.QtWidgets import (
 )
 from . import device
 from .fonts import FONT_OPTIONS, MAX_SIZE, MIN_SIZE, apply_font, register_fonts
-from .pipeline import AUDIO_EXTENSIONS, AddResult, collect_audio
+from .pipeline import ACCEPTED_EXTENSIONS, AddResult, collect_audio
 from .sync import SyncSession
 from .themes import THEMES, apply_theme
 from podracer_db.model import Track
@@ -226,6 +227,26 @@ class CheckWorker(QThread):
         self.progressMade.emit(done, total)
 
 
+class _FileFilterProxy(QSortFilterProxyModel):
+    """Hides album-folder junk (covers, scene NFOs) from the browser.
+
+    Files that cannot reach the iPod are still shown (this is a file
+    browser), but the noise that lives inside album folders — cover
+    scans and metadata NFOs — is hidden so it cannot be dragged onto
+    the iPod by accident. Directories always pass through.
+    """
+
+    HIDDEN_SUFFIXES = frozenset({".jpg", ".jpeg", ".png", ".nfo"})
+
+    def filterAcceptsRow(self, source_row, source_parent) -> bool:  # noqa: N802
+        model = self.sourceModel()
+        index = model.index(source_row, 0, source_parent)
+        if model.isDir(index):
+            return True
+        suffix = Path(model.fileName(index)).suffix.lower()
+        return suffix not in self.HIDDEN_SUFFIXES
+
+
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -246,9 +267,13 @@ class MainWindow(QMainWindow):
         start = self._music_home()
         self.fs_model = QFileSystemModel(self)
         self.fs_model.setRootPath(start)
+        self.fs_proxy = _FileFilterProxy(self)
+        self.fs_proxy.setSourceModel(self.fs_model)
         self.fs_view = QTreeView(self)
-        self.fs_view.setModel(self.fs_model)
-        self.fs_view.setRootIndex(self.fs_model.index(start))
+        self.fs_view.setModel(self.fs_proxy)
+        self.fs_view.setRootIndex(
+            self.fs_proxy.mapFromSource(self.fs_model.index(start))
+        )
         self.fs_view.setDragEnabled(True)
         self.fs_view.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
         self.fs_view.setHeaderHidden(False)
@@ -604,7 +629,9 @@ class MainWindow(QMainWindow):
     def _goto_path(self) -> None:
         path = self.path_bar.text().strip()
         if Path(path).is_dir():
-            self.fs_view.setRootIndex(self.fs_model.index(path))
+            self.fs_view.setRootIndex(
+                self.fs_proxy.mapFromSource(self.fs_model.index(path))
+            )
             self.path_bar.setText(str(Path(path)))
 
     def _go_up(self) -> None:
@@ -612,18 +639,20 @@ class MainWindow(QMainWindow):
         parent = index.parent()
         if parent.isValid():
             self.fs_view.setRootIndex(parent)
-            self.path_bar.setText(self.fs_model.filePath(parent))
+            source = self.fs_proxy.mapToSource(parent)
+            self.path_bar.setText(self.fs_model.filePath(source))
 
     def _show_fs_context_menu(self, pos) -> None:
         index = self.fs_view.indexAt(pos)
         if not index.isValid():
             return
-        path = Path(self.fs_model.filePath(index))
+        source = self.fs_proxy.mapToSource(index)
+        path = Path(self.fs_model.filePath(source))
         menu = QMenu(self)
-        is_music = path.is_dir() or path.suffix.lower() in AUDIO_EXTENSIONS
+        is_music = path.is_dir() or path.suffix.lower() in ACCEPTED_EXTENSIONS
         send = menu.addAction("Send to iPod")
         send.setEnabled(is_music)
-        send.setToolTip("Add every music file in this folder to the iPod.")
+        send.setToolTip("Add every music or video file in this folder to the iPod.")
         send.triggered.connect(lambda: self._files_dropped([str(path)]))
         if path.is_dir():
             set_home = menu.addAction("Set as default music folder")
@@ -636,14 +665,18 @@ class MainWindow(QMainWindow):
 
     def _set_music_home(self, path: Path) -> None:
         self.settings.setValue("fs/home", str(path))
-        self.fs_view.setRootIndex(self.fs_model.index(str(path)))
+        self.fs_view.setRootIndex(
+            self.fs_proxy.mapFromSource(self.fs_model.index(str(path)))
+        )
         self.path_bar.setText(str(path))
         self._status(f"Default music folder: {path}")
 
     def _clear_music_home(self) -> None:
         self.settings.remove("fs/home")
         home = self._music_home()
-        self.fs_view.setRootIndex(self.fs_model.index(home))
+        self.fs_view.setRootIndex(
+            self.fs_proxy.mapFromSource(self.fs_model.index(home))
+        )
         self.path_bar.setText(home)
         self._status("Default cleared — the app starts at Home.")
 

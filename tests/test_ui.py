@@ -230,7 +230,7 @@ class MusicHomeTests(_QtCase):
             win = MainWindow()
             win._set_music_home(Path(folder))
             self.assertEqual(win.settings.value("fs/home", "", str), folder)
-            self.assertEqual(Path(win.fs_model.filePath(win.fs_view.rootIndex())),
+            self.assertEqual(Path(win.fs_model.filePath(win.fs_proxy.mapToSource(win.fs_view.rootIndex()))),
                              Path(folder))
             win.close()
 
@@ -240,7 +240,7 @@ class MusicHomeTests(_QtCase):
             win._set_music_home(Path(folder))
             win.close()
             win2 = MainWindow()
-            self.assertEqual(Path(win2.fs_model.filePath(win2.fs_view.rootIndex())),
+            self.assertEqual(Path(win2.fs_model.filePath(win2.fs_proxy.mapToSource(win2.fs_view.rootIndex()))),
                              Path(folder))
             win2.close()
 
@@ -250,7 +250,7 @@ class MusicHomeTests(_QtCase):
             win._set_music_home(Path(folder))
             win._clear_music_home()
             self.assertEqual(win.settings.value("fs/home", "", str), "")
-            self.assertEqual(Path(win.fs_model.filePath(win.fs_view.rootIndex())),
+            self.assertEqual(Path(win.fs_model.filePath(win.fs_proxy.mapToSource(win.fs_view.rootIndex()))),
                              Path.home())
             win.close()
 
@@ -306,6 +306,52 @@ class AppearanceMenuTests(_QtCase):
         checked = [a for a in win._size_actions if a.isChecked()]
         self.assertEqual([a.text() for a in checked], [f"{MIN_SIZE} pt"])
         win.close()
+
+
+class FsFilterTests(_QtCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self._old_xdg = os.environ.get("XDG_CONFIG_HOME")
+        os.environ["XDG_CONFIG_HOME"] = self._tmp.name
+
+    def tearDown(self):
+        if self._old_xdg is None:
+            os.environ.pop("XDG_CONFIG_HOME", None)
+        else:
+            os.environ["XDG_CONFIG_HOME"] = self._old_xdg
+        self._tmp.cleanup()
+        super().tearDown()
+
+    def test_browser_hides_album_junk(self):
+        # Covers and scene NFOs must not be visible (or draggable) in
+        # the left pane; directories and real media stay.
+        import time
+
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "song.mp3").write_bytes(b"x")
+            (root / "clip.m4v").write_bytes(b"x")
+            (root / "cover.jpg").write_bytes(b"x")
+            (root / "info.nfo").write_bytes(b"x")
+            (root / "subdir").mkdir()
+            win = MainWindow()
+            win._set_music_home(root)
+            # QFileSystemModel populates asynchronously.
+            deadline = time.monotonic() + 5
+            while (win.fs_proxy.rowCount(win.fs_view.rootIndex()) == 0
+                   and time.monotonic() < deadline):
+                self.app.processEvents()
+                time.sleep(0.01)
+            names = sorted(
+                win.fs_model.fileName(
+                    win.fs_proxy.mapToSource(
+                        win.fs_proxy.index(row, 0, win.fs_view.rootIndex())
+                    )
+                )
+                for row in range(win.fs_proxy.rowCount(win.fs_view.rootIndex()))
+            )
+            self.assertEqual(names, ["clip.m4v", "song.mp3", "subdir"])
+            win.close()
 
 
 if __name__ == "__main__":

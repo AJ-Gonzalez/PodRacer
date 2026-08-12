@@ -23,6 +23,20 @@ def _make_audio(path: Path, fmt: str, tags: dict[str, str] | None = None) -> Pat
     return path
 
 
+def _make_video(path: Path, codec: str = "mpeg4", profile: str | None = None,
+                size: str = "320x240") -> Path:
+    """A short m4v/mp4 with AAC audio, for the video pipeline tests."""
+    args = ["ffmpeg", "-nostdin", "-y",
+            "-f", "lavfi", "-i", f"testsrc=duration=1:size={size}:rate=10",
+            "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
+            "-c:v", codec, "-c:a", "aac", "-pix_fmt", "yuv420p"]
+    if profile:
+        args += ["-profile:v", profile]
+    args += ["-shortest", str(path)]
+    subprocess.run(args, capture_output=True, check=True)
+    return path
+
+
 def _make_flac_with_art(path: Path, tags: dict[str, str] | None = None) -> Path:
     """FLAC with a big (3000x3000) embedded cover, to stress the
     art-downscaling transcode path.
@@ -120,7 +134,8 @@ def _id3_info(path: Path) -> tuple[int, int]:
 
 class NeedsTranscodeTests(unittest.TestCase):
     def test_native_extensions_copy(self):
-        for ext in (".mp3", ".m4a", ".aac", ".wav", ".aiff", ".aif"):
+        for ext in (".mp3", ".m4a", ".aac", ".wav", ".aiff", ".aif",
+                    ".mp4", ".m4v"):
             self.assertFalse(needs_transcode(f"x{ext}"), ext)
             self.assertFalse(needs_transcode(f"x{ext.upper()}"), ext)
 
@@ -229,6 +244,60 @@ class AddFileTests(unittest.TestCase):
         probed = read_tags(file_on_ipod)
         self.assertEqual(probed.title, "Big Art")
 
+    def test_add_compatible_video(self):
+        src = _make_video(Path(self.tmp.name) / "clip.m4v", codec="h264",
+                          profile="baseline")
+        result = self._add(src)
+        self.assertEqual(result.status, "added")
+        track = result.track
+        self.assertTrue(track.ipod_path.endswith(".m4v"))
+        self.assertEqual(track.filetype, "MPEG-4 video file")
+        self.assertEqual(track.filetype_marker,
+                         int.from_bytes(b"M4V ", "little"))
+        # Video tracks land in the device's Videos section.
+        self.assertEqual(track.mediatype, 8)
+        file_on_ipod = self.ipod_dir.joinpath(
+            *pipeline.ipod_path_parts(track.ipod_path)[2:]
+        )
+        self.assertTrue(file_on_ipod.is_file())
+        self.assertEqual(track.size, file_on_ipod.stat().st_size)
+        self.assertEqual(self.db.device_files_count(), 1)
+
+    def test_incompatible_video_rejected(self):
+        # Too large for the nano 3G (640x480 cap): rejected, not copied
+        # into a track that would list but never play.
+        src = _make_video(Path(self.tmp.name) / "huge.mp4",
+                          codec="mpeg4", profile="0", size="1280x720")
+        result = self._add(src)
+        self.assertEqual(result.status, "error")
+        self.assertIn("640x480", result.message)
+        self.assertEqual(self.db.device_files_count(), 0)
+
+    def test_video_profile_rejected(self):
+        src = _make_video(Path(self.tmp.name) / "high.mp4", codec="h264",
+                          profile="high")
+        result = self._add(src)
+        self.assertEqual(result.status, "error")
+        self.assertIn("profile", result.message)
+
+    def test_hevc_video_rejected(self):
+        src = _make_video(Path(self.tmp.name) / "modern.mp4",
+                          codec="libx265")
+        result = self._add(src)
+        self.assertEqual(result.status, "error")
+        self.assertIn("codec", result.message)
+
+    def test_collect_includes_video_ignores_junk(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "song.mp3").write_bytes(b"x")
+            (root / "clip.m4v").write_bytes(b"x")
+            (root / "cover.jpg").write_bytes(b"x")
+            (root / "info.nfo").write_bytes(b"x")
+            found = pipeline.collect_audio([root])
+            self.assertEqual([f.name for f in found],
+                             ["clip.m4v", "song.mp3"])
+
 
     def test_content_duplicate_skipped(self):
         src = _make_audio(Path(self.tmp.name) / "same.mp3", "mp3")
@@ -284,7 +353,9 @@ class CollectAudioTests(unittest.TestCase):
     def test_non_audio_drop_is_empty(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / "movie.mp4").write_bytes(b"x")
+            (root / "readme.txt").write_bytes(b"x")
+            (root / "cover.jpg").write_bytes(b"x")
+            (root / "info.nfo").write_bytes(b"x")
             self.assertEqual(pipeline.collect_audio([root]), [])
 
 

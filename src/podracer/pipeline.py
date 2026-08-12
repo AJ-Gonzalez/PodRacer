@@ -29,7 +29,17 @@ from podracer_db.model import MAC_EPOCH_OFFSET, Track
 from .provenance import ProvenanceDB, check_duplicate
 
 # Extensions the nano 3G plays as-is; everything else is transcoded.
-NATIVE_EXTENSIONS = frozenset({".mp3", ".m4a", ".aac", ".wav", ".aiff", ".aif"})
+# Video (.mp4/.m4v) is copied verbatim, never transcoded — only H.264
+# Baseline / MPEG-4 Simple Profile up to 640x480 actually plays on the
+# nano 3G, so incompatible files are rejected with a reason instead of
+# copied (see video_compatible()).
+NATIVE_EXTENSIONS = frozenset({
+    ".mp3", ".m4a", ".aac", ".wav", ".aiff", ".aif",
+    ".mp4", ".m4v",
+})
+
+# Containers the nano 3G shows in its Videos section.
+VIDEO_EXTENSIONS = frozenset({".mp4", ".m4v"})
 
 # Transcode target: MP3 256 kbps (user decision 2026-08-11: the AAC
 # container also needed a faststart moov; MP3 avoids the whole class).
@@ -57,26 +67,28 @@ TRANSCODE_ARGS = [
 # from the -b:a value above.
 TRANSCODE_BITRATE = 256_000
 
-# Everything we will copy or transcode when files/folders are dropped.
-AUDIO_EXTENSIONS = NATIVE_EXTENSIONS | frozenset(
+# Everything we will copy or transcode when files/folders are dropped:
+# music (native + transcodeable) plus video the nano can play.
+ACCEPTED_EXTENSIONS = NATIVE_EXTENSIONS | frozenset(
     {".flac", ".ogg", ".opus", ".wma", ".ape", ".m4b"}
 )
 
 
 def collect_audio(sources: list[Path]) -> list[Path]:
-    """Expand a drop (files and folders) to a sorted audio-file list.
+    """Expand a drop (files and folders) to a sorted media list.
 
-    Folders are walked recursively; non-audio files are ignored; the
-    result is deduplicated and sorted so the add order is stable.
+    Folders are walked recursively; non-music/non-video files are
+    ignored (album covers, NFOs, executables); the result is
+    deduplicated and sorted so the add order is stable.
     """
     found: set[Path] = set()
     for source in sources:
         if source.is_dir():
             found.update(
                 p for p in source.rglob("*")
-                if p.is_file() and p.suffix.lower() in AUDIO_EXTENSIONS
+                if p.is_file() and p.suffix.lower() in ACCEPTED_EXTENSIONS
             )
-        elif source.is_file() and source.suffix.lower() in AUDIO_EXTENSIONS:
+        elif source.is_file() and source.suffix.lower() in ACCEPTED_EXTENSIONS:
             found.add(source)
     return sorted(found, key=lambda p: str(p).casefold())
 
@@ -89,6 +101,8 @@ _FILETYPE_NAMES = {
     "wav": "WAV audio file",
     "aiff": "AIFF audio file",
     "aif": "AIFF audio file",
+    "mp4": "MPEG-4 video file",
+    "m4v": "MPEG-4 video file",
 }
 
 _MARKERS = {
@@ -97,6 +111,8 @@ _MARKERS = {
     ".wav": b"WAV ",
     ".aiff": b"AIF ",
     ".aif": b"AIF ",
+    ".mp4": b"M4V ",
+    ".m4v": b"M4V ",
 }
 
 
@@ -114,6 +130,60 @@ class AddResult:
 
 def needs_transcode(path: str | Path) -> bool:
     return Path(path).suffix.lower() not in NATIVE_EXTENSIONS
+
+
+# The nano 3G plays H.264 Baseline / MPEG-4 Simple Profile, capped at
+# 640x480@30fps and 2.5 Mbps. Anything else would list in the library
+# but never play (the same failure class as the big-APIC bug), so it is
+# rejected at add time with a reason. Conservative on purpose: profile
+# support beyond the spec is unverified on this hardware.
+_VIDEO_PROFILES = {
+    "h264": {"Baseline", "Constrained Baseline"},
+    "mpeg4": {"Simple"},
+}
+_VIDEO_MAX_W = 640
+_VIDEO_MAX_H = 480
+_VIDEO_MAX_BPS = 2_500_000
+
+
+def video_compatible(path: str | Path) -> str | None:
+    """Why a video will not play on the nano 3G, or None if it will."""
+    path = Path(path)
+    try:
+        proc = subprocess.run(
+            ["ffprobe", "-v", "error", "-print_format", "json",
+             "-show_streams", str(path)],
+            capture_output=True, text=True, check=True, timeout=60,
+        )
+    except (subprocess.SubprocessError, FileNotFoundError) as exc:
+        return f"ffprobe failed: {exc}"
+    info = json.loads(proc.stdout)
+    video = next(
+        (s for s in info.get("streams", [])
+         if s.get("codec_type") == "video"),
+        None,
+    )
+    if video is None:
+        return "no video stream"
+    codec = video.get("codec_name", "")
+    profile = video.get("profile") or ""
+    if codec not in _VIDEO_PROFILES:
+        return f"codec {codec} — the nano 3G plays H.264 or MPEG-4 video"
+    if profile and not any(
+        allowed in profile for allowed in _VIDEO_PROFILES[codec]
+    ):
+        return (
+            f"{codec} profile {profile} — the nano 3G needs "
+            f"{sorted(_VIDEO_PROFILES[codec])}"
+        )
+    width = int(video.get("width", 0) or 0)
+    height = int(video.get("height", 0) or 0)
+    if width > _VIDEO_MAX_W or height > _VIDEO_MAX_H:
+        return f"{width}x{height} — the nano 3G caps video at 640x480"
+    bitrate = int(video.get("bit_rate", 0) or 0)
+    if bitrate > _VIDEO_MAX_BPS:
+        return f"{bitrate / 1e6:.1f} Mbps video — the nano 3G caps at 2.5 Mbps"
+    return None
 
 
 def read_tags(path: str | Path) -> Track:
@@ -226,6 +296,14 @@ def add_file(
     except PipelineError as exc:
         return AddResult(status="error", message=str(exc))
 
+    if source.suffix.lower() in VIDEO_EXTENSIONS:
+        problem = video_compatible(source)
+        if problem is not None:
+            return AddResult(
+                status="error",
+                message=f"{source.name}: {problem}",
+            )
+
     duplicate = check_duplicate(db, source, probe, library_tracks)
     if duplicate is not None:
         return AddResult(status=duplicate, message=str(source))
@@ -264,7 +342,9 @@ def add_file(
     track.filetype_marker = int.from_bytes(
         _MARKERS.get(Path(name).suffix, b"\x00\x00\x00\x00"), "little"
     )
-    track.mediatype = 1
+    # Video lands in the device's Videos section (mediatype 8 = movie;
+    # audio is 1). Boot-test pending on the exact section.
+    track.mediatype = 8 if source.suffix.lower() in VIDEO_EXTENSIONS else 1
     track.size = dest.stat().st_size
     track.unk126 = 0xFFFF
     # Every working writer stamps these: unique persistent id (dbid2
