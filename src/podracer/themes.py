@@ -363,6 +363,7 @@ def hide_and_seek() -> Theme:
         status_text="#2f3233",
         header_gradient=("#89a8b2", "#b3c8cf"),
         header_text="#2f3233",
+        alternate_tint="rgba(229, 225, 218, 0.8)",   # warm-grey row stripes
     )
 
 
