@@ -12,17 +12,52 @@ from podracer_db import parse_db
 GUID = "0011223344556677"
 
 
+def _synthetic_db() -> bytes:
+    """A small but real iTunesDB for CI runs.
+
+    The real-device fixture is gitignored (see PENDING: no committed
+    DB fixture), so without it the seeded tests would silently start
+    from an empty device. The synthetic seed exercises the exact same
+    session flows; the device name matches so tests are agnostic.
+    """
+    from podracer_db import write_db
+    from podracer_db.model import Library, Playlist, Track
+
+    tracks = [
+        Track(
+            title=f"Song {i}",
+            artist="Artist",
+            album="Album",
+            tracklen=180000,
+            size=1234,
+            dbid=i + 1,
+            dbid2=i + 1,
+            ipod_path=f":iPod_Control:Music:F00:s{i:04d}.mp3",
+            filetype="MPEG audio file",
+        )
+        for i in range(3)
+    ]
+    lib = Library(tracks=tracks)
+    lib.playlists = [
+        Playlist(name="Hyperpink", ptype=1, id=0x1234, members=tracks)
+    ]
+    return write_db(lib, firewire_guid=GUID)
+
+
 def _fake_ipod(tmp: Path, seeded: bool = True) -> device.IPod:
-    """A fake mounted iPod; optionally seeded with the fixture DB."""
+    """A fake mounted iPod; optionally seeded with a device DB.
+
+    The real-device fixture is used when present; otherwise a synthetic
+    seeded DB keeps the session flows testable (including on CI, where
+    the gitignored fixture does not exist).
+    """
     ipod_dir = tmp / "HYPERPINK"
     (ipod_dir / "iPod_Control" / "iTunes").mkdir(parents=True)
     (ipod_dir / "iPod_Control" / "Music").mkdir(parents=True)
     if seeded:
         fixture = Path(__file__).resolve().parent.parent / "fixtures" / "raw" / "iTunesDB"
-        if fixture.is_file():
-            (ipod_dir / "iPod_Control" / "iTunes" / "iTunesDB").write_bytes(
-                fixture.read_bytes()
-            )
+        db_bytes = fixture.read_bytes() if fixture.is_file() else _synthetic_db()
+        (ipod_dir / "iPod_Control" / "iTunes" / "iTunesDB").write_bytes(db_bytes)
     return device.IPod(mountpoint=ipod_dir, label="HYPERPINK", guid=GUID)
 
 
@@ -32,13 +67,16 @@ class SyncSessionTests(unittest.TestCase):
         root = Path(self.tmp.name)
         self.ipod = _fake_ipod(root)
         self.session = SyncSession(self.ipod, sidecar=root / "lib.sqlite")
+        # Counts are derived from the seed (real fixture locally,
+        # synthetic on CI) so the assertions hold either way.
+        self.seeded_count = len(self.session.tracks)
 
     def tearDown(self):
         self.session.close()
         self.tmp.cleanup()
 
     def test_connect_parses_device_library(self):
-        self.assertEqual(len(self.session.tracks), 136)
+        self.assertEqual(len(self.session.tracks), self.seeded_count)
         self.assertEqual(self.session.device_name, "Hyperpink")
 
     def test_connect_empty_device_starts_blank(self):
@@ -54,7 +92,7 @@ class SyncSessionTests(unittest.TestCase):
         _make_mp3(src, title="New Song")
         result = self.session.add(src)
         self.assertEqual(result.status, "added")
-        self.assertEqual(len(self.session.tracks), 137)
+        self.assertEqual(len(self.session.tracks), self.seeded_count + 1)
         self.assertEqual(self.session.tracks[-1].title, "New Song")
         # File exists under iPod_Control/Music and is DB-referenced
         file_path = self.session.music_dir.joinpath(
@@ -67,7 +105,7 @@ class SyncSessionTests(unittest.TestCase):
         _make_mp3(src, title="Dup")
         self.assertEqual(self.session.add(src).status, "added")
         self.assertEqual(self.session.add(src).status, "content")
-        self.assertEqual(len(self.session.tracks), 137)
+        self.assertEqual(len(self.session.tracks), self.seeded_count + 1)
 
     def test_remove_deletes_file_and_entry(self):
         src = Path(self.tmp.name) / "gone.mp3"
@@ -77,7 +115,7 @@ class SyncSessionTests(unittest.TestCase):
         file_path = self.session.music_dir.joinpath(*pipeline.ipod_path_parts(track.ipod_path)[2:])
         self.session.remove(track)
         self.assertFalse(file_path.exists())
-        self.assertEqual(len(self.session.tracks), 136)
+        self.assertEqual(len(self.session.tracks), self.seeded_count)
         self.assertNotIn(track, self.session.lib.master_playlist().members)
 
     def test_sync_writes_db_keeps_mounted(self):
@@ -89,7 +127,7 @@ class SyncSessionTests(unittest.TestCase):
         self.session.sync()
         db = self.ipod.db_path.read_bytes()
         back = parse_db(db)
-        self.assertEqual(len(back.tracks), 137)
+        self.assertEqual(len(back.tracks), self.seeded_count + 1)
         self.assertEqual(back.tracks[-1].title, "Sync Me")
         self.assertTrue(self.ipod.mountpoint.is_dir())
 
@@ -100,7 +138,7 @@ class SyncSessionTests(unittest.TestCase):
         self.session.eject(unmount=False)
         db = (self.ipod.db_path).read_bytes()
         back = parse_db(db)
-        self.assertEqual(len(back.tracks), 137)
+        self.assertEqual(len(back.tracks), self.seeded_count + 1)
         self.assertEqual(back.tracks[-1].title, "Eject Me")
 
     def test_add_from_worker_thread_completes(self):
@@ -131,7 +169,7 @@ class SyncSessionTests(unittest.TestCase):
         self.assertFalse(thread.is_alive(), "add thread hung")
         self.assertEqual(error, [])
         self.assertEqual(results[0].status, "added")
-        self.assertEqual(len(self.session.tracks), 137)
+        self.assertEqual(len(self.session.tracks), self.seeded_count + 1)
 
 
 def _make_mp3(path: Path, title: str) -> None:

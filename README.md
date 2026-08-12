@@ -3,11 +3,11 @@
 <tr>
 <td>
 
-<img src="src/podracer/assets/podracer_icon.png" width="100" height="100" alt="PodRacer logo">
+<img src="src/podracer/assets/podracer_icon.png" width="128" height="128" alt="PodRacer logo">
 </td>
 <td>
 
-<pre style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;">
+<pre style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; font-style: italic;">
  ____           _ ____                     
 |  _ \ ___   __| |  _ \ __ _  ___ ___ _ __ 
 | |_) / _ \ / _` | |_) / _` |/ __/ _ \ '__|
