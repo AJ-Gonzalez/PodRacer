@@ -97,10 +97,21 @@ def main() -> int:
         print("No database file found under iPod_Control/iTunes/ — not an iPod library?", file=sys.stderr)
         return 1
 
-    sd = ipod / "iPod_Control" / "iTunes" / "iTunesSD"
-    if sd.is_file():
-        manifest["db_family"] = "itunessd"
-        print("note: device uses iTunesSD (newer family, not the v1 target); DB copied for reference")
+    # Family is decided by the DB's own magic, not by file presence:
+    # classic-format DBs start 'mhbd', iTunesSD-family DBs 'shdb'.
+    # A file named iTunesSD can exist on classic devices (this repo's
+    # nano 3G has one — a leftover from the previous sync tool) and is
+    # not a family signal.
+    for entry in manifest["files"]:
+        if entry["path"] not in ("iTunesDB", "iTunesCDB"):
+            continue
+        with open(args.out / entry["path"], "rb") as fh:
+            magic = fh.read(4)
+        if magic in (b"shdb", b"bdhs"):
+            manifest["db_family"] = "itunessd"
+            print("note: DB magic is 'shdb' (iTunesSD family, not the v1 target); copied for reference")
+        elif magic != b"mhbd":
+            print(f"warning: unexpected DB magic {magic!r}", file=sys.stderr)
 
     for src in sample_tracks(ipod, args.limit):
         dest = args.out / f"sample_{len(manifest['files']):02d}{src.suffix.lower()}"
