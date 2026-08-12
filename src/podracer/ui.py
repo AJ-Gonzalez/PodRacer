@@ -98,6 +98,42 @@ class TracksModel(QAbstractTableModel):
         return self.session.tracks[row]
 
 
+class LibraryView(QTableView):
+    """Library table with drop and Delete wiring.
+
+    Subclassing is required: PySide6 dispatches virtual methods through
+    the class, so instance-attribute assignments (view.dragEnterEvent =
+    ...) never fire. Signals keep the view free of session logic.
+    """
+
+    filesDropped = Signal(object)   # list[Path] from a drop
+    deleteRequested = Signal()
+
+    def dragEnterEvent(self, event) -> None:  # noqa: N802
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dragMoveEvent(self, event) -> None:  # noqa: N802
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event) -> None:  # noqa: N802
+        paths = [
+            Path(u.toLocalFile())
+            for u in event.mimeData().urls()
+            if u.isLocalFile() and Path(u.toLocalFile()).exists()
+        ]
+        if paths:
+            self.filesDropped.emit(paths)
+            event.acceptProposedAction()
+
+    def keyPressEvent(self, event) -> None:  # noqa: N802
+        if event.key() == Qt.Key.Key_Delete:
+            self.deleteRequested.emit()
+            return
+        super().keyPressEvent(event)
+
+
 class AddWorker(QThread):
     """Adds dropped files in the background; cancel between files."""
 
@@ -142,7 +178,14 @@ class MainWindow(QMainWindow):
         self.fs_view.setDragEnabled(True)
         self.fs_view.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
         self.fs_view.setHeaderHidden(False)
-        self.fs_view.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        # All columns manually resizable (no Stretch lock); the date
+        # column absorbs leftover space instead.
+        self.fs_view.header().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.fs_view.header().setStretchLastSection(True)
+        self.fs_view.setColumnWidth(0, 280)
+        self.fs_view.setColumnWidth(1, 80)
+        self.fs_view.setColumnWidth(2, 90)
+        self.fs_view.setColumnWidth(3, 130)
 
         self.path_bar = QLineEdit(self)
         self.path_bar.setText(str(Path.home()))
@@ -162,12 +205,14 @@ class MainWindow(QMainWindow):
 
         # -- right pane: library ---------------------------------------
         self.tracks_model = TracksModel()
-        self.lib_view = QTableView(self)
+        self.lib_view = LibraryView(self)
         self.lib_view.setModel(self.tracks_model)
         self.lib_view.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.lib_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.lib_view.setAcceptDrops(True)
         self.lib_view.setDropIndicatorShown(True)
+        self.lib_view.filesDropped.connect(self._files_dropped)
+        self.lib_view.deleteRequested.connect(self._remove_selected)
         self.lib_view.horizontalHeader().setSectionResizeMode(
             0, QHeaderView.ResizeMode.Stretch
         )
@@ -248,10 +293,6 @@ class MainWindow(QMainWindow):
         self._timer.start()
         self._poll_device()
 
-        # drag & drop and keyboard wiring
-        self.lib_view.dragEnterEvent = self._drag_enter
-        self.lib_view.dropEvent = self._drop
-        self.lib_view.keyPressEvent = self._lib_key
 
     # -- theme ----------------------------------------------------------
 
@@ -407,17 +448,11 @@ class MainWindow(QMainWindow):
 
     # -- add / remove ----------------------------------------------------
 
-    def _drag_enter(self, event) -> None:
-        if self.session is not None and event.mimeData().hasUrls():
-            event.acceptProposedAction()
-
-    def _drop(self, event) -> None:
+    def _files_dropped(self, paths: list) -> None:
         if self.session is None:
             self._status("Plug in the iPod first.")
             return
-        dropped = [Path(u.toLocalFile()) for u in event.mimeData().urls()
-                   if u.isLocalFile() and Path(u.toLocalFile()).exists()]
-        sources = collect_audio(dropped)
+        sources = collect_audio([Path(p) for p in paths])
         if not sources:
             self._status("No music files in that drop.")
             return
@@ -465,11 +500,6 @@ class MainWindow(QMainWindow):
             self._worker.cancelled = True
             self._status("Finishing the current file…")
 
-    def _lib_key(self, event) -> None:
-        if event.key() == Qt.Key.Key_Delete:
-            self._remove_selected()
-            return
-        super(QTableView, self.lib_view).keyPressEvent(event)
 
     def _remove_selected(self) -> None:
         if self.session is None or self._worker is not None:
