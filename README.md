@@ -38,6 +38,14 @@ Linux only, 64-bit: x86_64 (amd64) and ARM64 (aarch64) binaries, plus ARM64 via 
 
 Verified on systemd distros; Artix and Devuan are next on the test list.
 
+## Want to help?
+
+The biggest help: a real iTunesDB dump from a device we cannot verify ourselves. Nano 1G-2G especially, but any classic or mini helps. One command:
+
+    python3 scripts/dump_itunesdb.py
+
+then open a PR adding the file under `fixtures/public/<model>/`, or send it along. Heads up: the DB lists your whole music library (titles, artists, play counts), so only share one you are comfortable with.
+
 ## Themes
 
 <img src="mockups/contact-sheet.png" width="800" alt="Six PodRacer themes: Grey Moonlight, Frutiger Aero, Aqua, Dark Aqua, Minty Forest, Lilac Love">
