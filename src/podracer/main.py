@@ -58,6 +58,10 @@ def main() -> int:
         return 1
 
     window = MainWindow()
+    if "--demo" in app.arguments():
+        # Synthetic library + fake music tree; nothing real is read.
+        # Screenshots of theme showcases come from this mode.
+        window._enter_demo_mode()
     if icon.is_file():
         # The app icon covers the taskbar; the window needs its own
         # copy for the title bar on some window managers.

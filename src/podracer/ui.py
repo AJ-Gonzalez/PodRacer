@@ -13,6 +13,7 @@ ships a stylesheet hook today.
 
 from __future__ import annotations
 
+import tempfile
 import time
 from datetime import date
 from pathlib import Path
@@ -975,6 +976,32 @@ class MainWindow(QMainWindow):
         if errors:
             self._status("Removal problem: " + "; ".join(errors[:2]))
         self._refresh_after_change()
+
+    # -- demo mode ---------------------------------------------------------
+
+    def _enter_demo_mode(self) -> None:
+        """Render with a synthetic library and fake music tree (--demo).
+
+        Nothing real is touched: the session is a fake device seeded
+        with invented tracks, the left pane shows a fabricated album
+        tree, and device polling is stopped so a plugged-in iPod can
+        not take over the showcase.
+        """
+        self._timer.stop()
+        if self.session is not None:
+            self.session.close()
+            self.session = None
+        from . import demo
+
+        root = Path(tempfile.mkdtemp(prefix="podracer-demo-"))
+        ipod, music = demo.build_demo(root)
+        self.session = SyncSession(ipod, sidecar=root / "lib.sqlite")
+        self._refresh_after_change()
+        self.fs_view.setRootIndex(
+            self.fs_proxy.mapFromSource(self.fs_model.index(str(music)))
+        )
+        self.path_bar.setText(str(music))
+        self._status("Demo mode — sample library, nothing real.")
 
     # -- helpers -----------------------------------------------------------
 
