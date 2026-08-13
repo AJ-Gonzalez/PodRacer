@@ -86,6 +86,9 @@ jobs:
           name: podracer-flatpak
 
       - name: Release
+        # Dispatch runs build for verification; releases only happen
+        # on v* tags (softprops errors without one).
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
