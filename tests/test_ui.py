@@ -22,22 +22,31 @@ from PySide6.QtWidgets import (
 from podracer_db.model import Track
 from podracer.fonts import FONT_OPTIONS, MAX_SIZE, MIN_SIZE
 from podracer.themes import THEMES
-from podracer.ui import LibraryView, MainWindow, MetadataDialog, TracksModel
+from podracer.ui import (
+    BulkMetadataDialog,
+    LibraryView,
+    MainWindow,
+    MetadataDialog,
+    TracksModel,
+)
 
 
-def _synthetic_db_with_track() -> bytes:
-    """A real iTunesDB with one tagged track (no gitignored fixture)."""
+def _synthetic_db_with_track(count=1) -> bytes:
+    """A real iTunesDB with tagged tracks (no gitignored fixture)."""
     from podracer_db import write_db
     from podracer_db.model import Library, Playlist, Track
 
-    track = Track(
-        title="Orig Title", artist="Orig Artist",
-        album="Orig Album", genre="Orig Genre",
-        ipod_path=":iPod_Control:Music:F00:AB12.mp3",
-    )
-    lib = Library(tracks=[track])
+    tracks = []
+    for i in range(count):
+        title = "Orig Title" if i == 0 else f"Song {i + 1}"
+        tracks.append(Track(
+            title=title, artist="Orig Artist",
+            album="Orig Album", genre="Orig Genre",
+            ipod_path=f":iPod_Control:Music:F00:AB{i:02X}.mp3",
+        ))
+    lib = Library(tracks=tracks)
     lib.playlists = [
-        Playlist(name="Hyperpink", ptype=1, id=0x1234, members=[track])
+        Playlist(name="Hyperpink", ptype=1, id=0x1234, members=tracks)
     ]
     return write_db(lib, firewire_guid="0011223344556677")
 
@@ -230,7 +239,7 @@ class QuitGuardTests(_QtCase):
 class MetadataEditTests(_QtCase):
     """Tag editing: dialog prefill + dialog-free apply path."""
 
-    def _make_window_with_session(self):
+    def _make_window_with_session(self, count=1):
         from podracer import device
         from podracer.sync import SyncSession
 
@@ -239,7 +248,7 @@ class MetadataEditTests(_QtCase):
         (ipod_dir / "iPod_Control" / "iTunes").mkdir(parents=True)
         (ipod_dir / "iPod_Control" / "Music").mkdir(parents=True)
         (ipod_dir / "iPod_Control" / "iTunes" / "iTunesDB").write_bytes(
-            _synthetic_db_with_track()
+            _synthetic_db_with_track(count)
         )
         ipod = device.IPod(
             mountpoint=ipod_dir, label="HYPERPINK", block_device="sdb1",
@@ -299,6 +308,53 @@ class MetadataEditTests(_QtCase):
                 "title": "Orig Title", "artist": "Orig Artist",
                 "album": "Orig Album", "genre": "Orig Genre",
             })
+            self.assertFalse(win._dirty)
+        finally:
+            win.session.close()
+            win.close()
+            tmp.cleanup()
+
+    def test_bulk_dialog_empty_values(self):
+        dialog = BulkMetadataDialog(3)
+        self.assertEqual(dialog.values(), {})
+        dialog.deleteLater()
+
+    def test_bulk_dialog_only_filled_fields(self):
+        dialog = BulkMetadataDialog(3)
+        dialog._edits["Artist"].setText("  New Artist  ")
+        dialog._edits["Genre"].setText("")
+        self.assertEqual(dialog.values(), {"artist": "New Artist"})
+        dialog.deleteLater()
+
+    def test_apply_bulk_metadata_edits_all_and_dirty(self):
+        win, tmp = self._make_window_with_session(count=2)
+        try:
+            rows = [win.tracks_model.index(0, 0), win.tracks_model.index(1, 0)]
+            win._apply_bulk_metadata(rows, {
+                "artist": "Bulk Artist", "album": "Bulk Album",
+            })
+            tracks = win.session.tracks
+            self.assertEqual([t.artist for t in tracks],
+                             ["Bulk Artist", "Bulk Artist"])
+            self.assertEqual([t.album for t in tracks],
+                             ["Bulk Album", "Bulk Album"])
+            self.assertTrue(win._dirty)
+            # The untouched title still shows in the model.
+            self.assertEqual(
+                win.tracks_model.data(win.tracks_model.index(1, 0)),
+                "Song 2",
+            )
+        finally:
+            win._dirty = False  # closeEvent would open the quit-guard modal
+            win.session.close()
+            win.close()
+            tmp.cleanup()
+
+    def test_apply_bulk_metadata_empty_values_noop(self):
+        win, tmp = self._make_window_with_session(count=2)
+        try:
+            rows = [win.tracks_model.index(0, 0), win.tracks_model.index(1, 0)]
+            win._apply_bulk_metadata(rows, {})
             self.assertFalse(win._dirty)
         finally:
             win.session.close()

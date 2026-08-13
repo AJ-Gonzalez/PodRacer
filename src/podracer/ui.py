@@ -190,6 +190,54 @@ class MetadataDialog(QDialog):
         return {field.lower(): edit.text() for field, edit in self._edits.items()}
 
 
+class BulkMetadataDialog(QDialog):
+    """Edit title/artist/album/genre on many tracks at once.
+
+    Empty fields mean "leave unchanged", never "clear": clearing a tag
+    is a per-track action and must not happen by accident across a
+    selection. Thin widget, like MetadataDialog; the apply decision
+    lives in MainWindow.
+    """
+
+    FIELDS = ("Title", "Artist", "Album", "Genre")
+
+    def __init__(self, count: int, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(f"Edit metadata for {count} tracks")
+        self.setMinimumWidth(360)
+        form = QVBoxLayout(self)
+        note = QLabel("Empty fields are left unchanged.", self)
+        note.setWordWrap(True)
+        form.addWidget(note)
+        self._edits: dict[str, QLineEdit] = {}
+        for field in self.FIELDS:
+            label = QLabel(field, self)
+            edit = QLineEdit(self)
+            edit.setPlaceholderText("leave unchanged")
+            self._edits[field] = edit
+            form.addWidget(label)
+            form.addWidget(edit)
+        buttons = QHBoxLayout()
+        cancel = QPushButton("Cancel", self)
+        cancel.clicked.connect(self.reject)
+        save = QPushButton("Save", self)
+        save.setDefault(True)
+        save.clicked.connect(self.accept)
+        buttons.addStretch(1)
+        buttons.addWidget(cancel)
+        buttons.addWidget(save)
+        form.addLayout(buttons)
+
+    def values(self) -> dict:
+        """Only the filled fields, ready for set_metadata_bulk (None = leave)."""
+        out = {}
+        for field, edit in self._edits.items():
+            text = edit.text().strip()
+            if text:
+                out[field.lower()] = text
+        return out
+
+
 class AddWorker(QThread):
     """Adds dropped files in the background; cancel between files."""
 
@@ -382,8 +430,9 @@ class MainWindow(QMainWindow):
         )
         self.lib_view.setToolTip(
             "Drag songs here to add them to the iPod.\n"
-            "Double-click a song to edit its title, artist, album, or genre.\n"
-            "Select songs, then press Delete or right-click to remove."
+            "Double-click a song, or right-click, to edit its metadata.\n"
+            "Select several songs and right-click to edit them all at once.\n"
+            "Press Delete to remove the selection."
         )
         self.lib_view.selectionModel().selectionChanged.connect(
             self._selection_changed
@@ -854,10 +903,9 @@ class MainWindow(QMainWindow):
                 self.lib_view.selectRow(row)
         menu = QMenu(self)
         edit = menu.addAction("Edit metadata…")
-        edit.setToolTip("Change this song's title, artist, album, or genre.")
-        edit.setEnabled(
-            len(self.lib_view.selectionModel().selectedRows()) == 1
-        )
+        edit.setToolTip("Change title, artist, album, or genre. "
+                        "With several songs selected, edits all of them.")
+        edit.setEnabled(bool(self.lib_view.selectionModel().selectedRows()))
         edit.triggered.connect(self._edit_selected)
         remove = menu.addAction("Remove from iPod")
         remove.setEnabled(bool(self.lib_view.selectionModel().selectedRows()))
@@ -867,10 +915,20 @@ class MainWindow(QMainWindow):
     # -- metadata editing -------------------------------------------------
 
     def _edit_selected(self) -> None:
-        """Open the metadata editor for the single selected track."""
+        """Open the metadata editor: one track, or a bulk edit for many."""
         rows = self.lib_view.selectionModel().selectedRows()
+        if not rows:
+            return
         if len(rows) == 1:
             self._edit_track(rows[0].row())
+            return
+        tracks = [self.tracks_model.track_at(r.row()) for r in rows]
+        tracks = [t for t in tracks if t is not None]
+        if not tracks or self.session is None or self._transfer_running():
+            return
+        dialog = BulkMetadataDialog(len(tracks), self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self._apply_bulk_metadata(rows, dialog.values())
 
     def _edit_track(self, row: int) -> None:
         """Open the editor for one track; apply on Save (no-op on Cancel)."""
@@ -896,6 +954,25 @@ class MainWindow(QMainWindow):
                 f"Updated metadata for '{track.display_title}' — "
                 "Sync to write it to the iPod."
             )
+
+    def _apply_bulk_metadata(self, rows: list, values: dict) -> None:
+        """Dialog-free bulk apply; empty fields are untouched."""
+        if self.session is None or not values:
+            return
+        tracks = [self.tracks_model.track_at(r.row()) for r in rows]
+        tracks = [t for t in tracks if t is not None]
+        if not tracks:
+            return
+        changed = self.session.set_metadata_bulk(tracks, **values)
+        if not changed:
+            self._status("No metadata changes.")
+            return
+        self._dirty = True
+        for r in rows:
+            self.tracks_model.track_changed(r.row())
+        self._status(
+            f"Updated {changed} track(s) — Sync to write it to the iPod."
+        )
 
     # -- eject ------------------------------------------------------------
 

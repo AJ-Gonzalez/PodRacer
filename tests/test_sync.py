@@ -126,6 +126,31 @@ class SyncSessionTests(unittest.TestCase):
         self.assertTrue(self.session.set_metadata(track, album="   "))
         self.assertIsNone(track.album)
 
+    def test_set_metadata_bulk_applies_to_all(self):
+        tracks = self.session.tracks[:2]
+        changed = self.session.set_metadata_bulk(
+            tracks, artist="Bulk Artist", album="Bulk Album",
+        )
+        self.assertGreaterEqual(changed, 1)
+        for track in tracks:
+            self.assertEqual(track.artist, "Bulk Artist")
+            self.assertEqual(track.album, "Bulk Album")
+
+    def test_set_metadata_bulk_leaves_empty_fields(self):
+        tracks = self.session.tracks[:2]
+        original = [track.title for track in tracks]
+        changed = self.session.set_metadata_bulk(tracks, genre="Bulk Genre")
+        self.assertGreaterEqual(changed, 1)
+        self.assertEqual([track.title for track in tracks], original)
+        for track in tracks:
+            self.assertEqual(track.genre, "Bulk Genre")
+
+    def test_set_metadata_bulk_noop_counts_zero(self):
+        track = self.session.tracks[0]
+        changed = self.session.set_metadata_bulk(
+            [track], artist=track.artist)
+        self.assertEqual(changed, 0)
+
     def test_set_metadata_persists_on_sync(self):
         track = self.session.tracks[0]
         self.session.set_metadata(

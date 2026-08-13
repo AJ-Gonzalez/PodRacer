@@ -110,6 +110,30 @@ class SyncSession:
             changed = True
         return changed
 
+    def set_metadata_bulk(
+        self,
+        tracks: list[Track],
+        *,
+        title: str | None = None,
+        artist: str | None = None,
+        album: str | None = None,
+        genre: str | None = None,
+    ) -> int:
+        """Apply the same tag values to many tracks at once.
+
+        Same semantics as set_metadata: None leaves a field untouched,
+        "" clears it. The bulk dialog keeps empty fields as None so a
+        bulk edit never wipes a tag by accident. Returns how many
+        tracks actually changed.
+        """
+        changed = 0
+        for track in tracks:
+            if self.set_metadata(
+                track, title=title, artist=artist, album=album, genre=genre
+            ):
+                changed += 1
+        return changed
+
     def sync(self) -> None:
         """Write the library to the device now; keep it mounted.
 
