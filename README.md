@@ -17,7 +17,20 @@ Transfer music to an iPod from Linux without iTunes.
 
 Midnight-commander-style two-pane UI: browse your music folder on the left, see what is on the iPod on the right. Manual sync, automatic duplicate avoidance, auto-transcode via ffmpeg.
 
-Please note it targets the classic iTunesDB device family first: iPod nano 3G (the original target) plus nano 1-3G and classic 1-5.5G.
+## Compatibility
+
+| Device generation | Supported? | Tested on Physical Hardware? |
+| --- | --- | --- |
+| iPod nano 3G | Yes | Yes |
+| iPod nano 1G–2G | Yes | No |
+| iPod classic 1G–5.5G | Yes | No |
+| iPod mini | Yes | No |
+| iPod nano 4G+ | No | No |
+| iPod classic 6G/7G | No | No |
+| iPod shuffle | No | No |
+| iPod touch | No | No |
+
+nano 4G+ and classic 6G/7G (iTunesSD format) are planned.
 
 ## Themes
 
