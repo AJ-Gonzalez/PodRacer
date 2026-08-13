@@ -11,15 +11,14 @@ on:
 jobs:
   flatpak:
     runs-on: ubuntu-latest
+    # The flathub-infra image ships flatpak tooling and runs root, so
+    # runtime deploys to the system installation work (the bare runner
+    # user gets denied by polkit). --privileged for the sandbox helpers.
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08
+      options: --privileged
     steps:
       - uses: actions/checkout@v4
-      - name: Install flatpak tooling
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder
-          # The action installs runtime deps with flatpak --system, so
-          # flathub must exist as a system remote, not just --user.
-          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           manifest-path: io.github.ajgonzalez.PodRacer.yml
@@ -30,8 +29,8 @@ jobs:
           upload-artifact: false
       - name: Install and smoke inside the sandbox
         run: |
-          flatpak --user remote-add --if-not-exists --no-gpg-verify podracer-repo repo
-          flatpak --user install --noninteractive podracer-repo io.github.ajgonzalez.PodRacer
+          flatpak remote-add --if-not-exists --no-gpg-verify podracer-repo repo
+          flatpak install --noninteractive podracer-repo io.github.ajgonzalez.PodRacer
           flatpak run --command=sh io.github.ajgonzalez.PodRacer -c \
             'command -v ffmpeg && command -v ffprobe && echo ffmpeg-ok'
           QT_QPA_PLATFORM=offscreen flatpak run io.github.ajgonzalez.PodRacer --smoke
