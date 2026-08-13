@@ -40,7 +40,7 @@ Verified on systemd distros; Artix and Devuan are next on the test list.
 
 ## Want to help?
 
-The biggest help: a real iTunesDB dump from a device we cannot verify ourselves. Nano 1G-2G especially, but any classic or mini helps. One command:
+The biggest help: a real iTunesDB dump from a device we cannot verify ourselves. Nano 1G-2G especially, but any classic or mini helps, and a Shuffle 1G/2G dump would unlock the order-only DB work. One command:
 
     python3 scripts/dump_itunesdb.py
 
