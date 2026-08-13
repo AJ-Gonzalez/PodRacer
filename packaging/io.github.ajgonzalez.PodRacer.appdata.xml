@@ -3,7 +3,7 @@
   <id>io.github.ajgonzalez.PodRacer</id>
   <name>PodRacer</name>
   <summary>Transfer music to an iPod from Linux, no iTunes</summary>
-  <metadata_license>Apache-2.0</metadata_license>
+  <metadata_license>CC0-1.0</metadata_license>
   <project_license>Apache-2.0</project_license>
   <description>
     <p>Midnight-commander-style two-pane UI: browse your music folder on the left, see what is on the iPod on the right. Manual sync, automatic duplicate avoidance, auto-transcode via ffmpeg. The classic iTunesDB family: iPod nano 1G-3G, classic 1G-5.5G, and mini.</p>
