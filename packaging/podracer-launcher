@@ -1,0 +1,7 @@
+#!/bin/sh
+# PodRacer entry inside the flatpak sandbox. The runtime's python must
+# see the app's site-packages under /app; set it explicitly instead of
+# relying on site magic (which varies with runtime python versions).
+PY=$(/usr/bin/python3 -c 'import sys; print(f"python{sys.version_info.major}.{sys.version_info.minor}")')
+export PYTHONPATH="/app/lib/$PY/site-packages${PYTHONPATH:+:$PYTHONPATH}"
+exec /usr/bin/python3 -m podracer.main "$@"

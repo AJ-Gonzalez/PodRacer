@@ -1,0 +1,49 @@
+app-id: io.github.ajgonzalez.PodRacer
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+command: podracer
+
+finish-args:
+  # The whole host filesystem: the app browses the user's music folders
+  # and reads mounts under /run/media/$USER.
+  - --filesystem=host
+  # Device access goes through the udisks2 daemon on the system bus.
+  - --socket=system-bus
+  - --socket=x11
+  - --socket=wayland
+  - --share=ipc
+  - --device=dri
+  # Local tool: no network access at runtime.
+  - --unshare=network
+
+# ffmpeg comes from the runtime extension (full codec build). The
+# binaries land under the extension's prefix; the ffmpeg-links module
+# exposes them on PATH. The extension is installed automatically when
+# the app is installed.
+add-extensions:
+  org.freedesktop.Platform.ffmpeg-full:
+    directory: lib/ffmpeg
+    add-ld-path: lib
+    version: '25.08'
+
+modules:
+  - name: podracer
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-cache-dir PySide6
+      - pip3 install --prefix=/app --no-deps ./packages/podracer_db
+      - pip3 install --prefix=/app --no-deps .
+      - install -Dm755 packaging/podracer-launcher /app/bin/podracer
+      - install -Dm644 packaging/io.github.ajgonzalez.PodRacer.desktop /app/share/applications/io.github.ajgonzalez.PodRacer.desktop
+      - install -Dm644 packaging/io.github.ajgonzalez.PodRacer.appdata.xml /app/share/metainfo/io.github.ajgonzalez.PodRacer.appdata.xml
+      - install -Dm644 src/podracer/assets/podracer_icon.png /app/share/icons/hicolor/256x256/apps/io.github.ajgonzalez.PodRacer.png
+    sources:
+      - type: dir
+        path: .
+
+  - name: ffmpeg-links
+    buildsystem: simple
+    build-commands:
+      - ln -s /usr/lib/ffmpeg/bin/ffmpeg /app/bin/ffmpeg
+      - ln -s /usr/lib/ffmpeg/bin/ffprobe /app/bin/ffprobe

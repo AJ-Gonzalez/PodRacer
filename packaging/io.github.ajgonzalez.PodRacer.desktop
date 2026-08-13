@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=PodRacer
+Comment=Transfer music to an iPod from Linux, no iTunes
+Exec=podracer
+Icon=io.github.ajgonzalez.PodRacer
+Terminal=false
+Type=Application
+Categories=AudioVideo;Audio;

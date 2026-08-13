@@ -1,14 +1,44 @@
 name: build
 
-# Build the one-file Linux bundle on tags and attach it to a release.
+# Build the one-file Linux bundle and the Flatpak bundle on tags and
+# attach both to a release. The Flatpak references the freedesktop
+# runtime instead of bundling it, so the artifact stays small.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
 
 jobs:
+  flatpak:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest: io.github.ajgonzalez.PodRacer.yml
+          repo-url: https://flathub.org/repo/flathub.flatpakrepo
+          cache: true
+      - name: Bundle (runtime referenced, not bundled)
+        run: >
+          flatpak build-bundle
+          --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
+          repo podracer.flatpak io.github.ajgonzalez.PodRacer stable
+      - name: Install and smoke inside the sandbox
+        run: |
+          flatpak --user remote-add --if-not-exists --no-gpg-verify podracer-repo repo
+          flatpak --user install --noninteractive podracer-repo io.github.ajgonzalez.PodRacer
+          flatpak run --command=sh io.github.ajgonzalez.PodRacer -c \
+            'command -v ffmpeg && command -v ffprobe && echo ffmpeg-ok'
+          QT_QPA_PLATFORM=offscreen flatpak run io.github.ajgonzalez.PodRacer --smoke
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: podracer-flatpak
+          path: podracer.flatpak
+
   build-linux:
     runs-on: ubuntu-latest
+    needs: flatpak
     # The Release step creates a GitHub Release; the default token is
     # read-only, so the job must request write access to contents.
     permissions:
@@ -24,8 +54,9 @@ jobs:
         run: |
           sudo apt-get update
           # ffmpeg: tag reading + transcode (also needed by the tests and
-          # the smoke check). udisksctl: the startup guard checks for it.
-          # The rest are Qt offscreen/headless runtime libraries.
+          # the smoke check). The rest are Qt offscreen/headless runtime
+          # libraries. The device layer talks to udisks2 over D-Bus now,
+          # but the package is still installed for the daemon tests.
           sudo apt-get install -y ffmpeg udisks2 \
             libegl1 libgl1 libxkbcommon0 libdbus-1-3 libfontconfig1
 
@@ -45,8 +76,15 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: ./podracer --smoke
 
+      - name: Download flatpak bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: podracer-flatpak
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          files: podracer
+          files: |
+            podracer
+            podracer.flatpak
           name: PodRacer ${{ github.ref_name }}
