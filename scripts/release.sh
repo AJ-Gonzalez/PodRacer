@@ -14,7 +14,7 @@ TAG="v$VERSION"
 
 if [ "$DRY" = 1 ]; then
   echo "dry-run: would set version $VERSION in pyproject.toml and src/podracer/__init__.py,"
-  echo "commit, tag $TAG, push main + $TAG (publish.yml + build.yml then run on the tag)"
+  echo "commit, tag $TAG, push main + $TAG (publish-app.yml + build.yml then run on the tag)"
   exit 0
 fi
 
@@ -25,4 +25,4 @@ git add pyproject.toml src/podracer/__init__.py
 git commit -m "release $VERSION"
 git tag "$TAG"
 git push origin main "$TAG"
-echo "pushed $TAG — publish.yml ships the app dists"
+echo "pushed $TAG — publish-app.yml ships the app dists (publish the codec first)"

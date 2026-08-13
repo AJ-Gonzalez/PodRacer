@@ -25,4 +25,4 @@ git add packages/podracer_db/pyproject.toml packages/podracer_db/src/podracer_db
 git commit -m "release podracer_db $VERSION"
 git tag "$TAG"
 git push origin main "$TAG"
-echo "pushed $TAG — publish.yml ships the codec dists"
+echo "pushed $TAG — publish-db.yml ships the codec dists"

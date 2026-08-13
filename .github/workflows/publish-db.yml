@@ -1,0 +1,84 @@
+name: publish-db
+
+# Ship the podracer_db codec dist to PyPI. Separate workflow from the
+# app's (publish-app.yml) on purpose: PyPI trusted-publishing matching
+# keys on repo + workflow filename, so two projects sharing one
+# workflow make the publisher match ambiguous. One workflow per
+# project = deterministic.
+#
+# Trusted publishing (OIDC): register a pending publisher on
+# test.pypi.org AND pypi.org for project podracer_db — Owner
+# AJ-Gonzalez, Repository PodRacer, Workflow name publish-db.yml,
+# Environment left empty.
+on:
+  push:
+    tags: ["db-v*"]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Index to publish to (tag pushes always do both)"
+        type: choice
+        default: testpypi
+        options: [testpypi, pypi, both]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-db:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Quality gates (codec tests)
+        run: python3 -m unittest tests.test_itunesdb tests.test_fixtures -v
+      - name: Tag matches version (db-v tags only)
+        if: startsWith(github.ref, 'refs/tags/db-v')
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF#refs/tags/db-v}"
+          PYPROJECT="$(python3 -c \
+            "import tomllib; print(tomllib.load(open('packages/podracer_db/pyproject.toml','rb'))['project']['version'])")"
+          INIT="$(python3 -c \
+            "import ast; t=ast.parse(open('packages/podracer_db/src/podracer_db/__init__.py').read()); \
+             print(next(n.value.value for n in t.body if isinstance(n, ast.Assign) \
+             and any(getattr(x,'id','')=='__version__' for x in n.targets)))")"
+          [ "$TAG" = "$PYPROJECT" ] || { echo "tag db-v$TAG != pyproject $PYPROJECT"; exit 1; }
+          [ "$PYPROJECT" = "$INIT" ] || { echo "pyproject $PYPROJECT != __version__ $INIT"; exit 1; }
+      - name: Build sdist + wheel
+        working-directory: packages/podracer_db
+        run: |
+          pip install build
+          python3 -m build
+      - name: Wheel smoke (fresh venv round-trip)
+        run: |
+          python3 -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install --quiet packages/podracer_db/dist/podracer_db-*.whl
+          /tmp/smoke/bin/python - <<'EOF'
+          from podracer_db import __version__, parse_db, write_db
+          from podracer_db.model import Library, Playlist, Track
+          t = Track(title="T", ipod_path=":iPod_Control:Music:F00:AB12.mp3")
+          lib = Library(tracks=[t])
+          lib.playlists = [Playlist(name="P", ptype=1, id=1, members=[t])]
+          assert parse_db(write_db(lib, firewire_guid="0011223344556677")) \
+              .master_playlist().members[0].title == "T"
+          print("codec wheel OK", __version__)
+          EOF
+      - name: Publish to Test PyPI
+        if: startsWith(github.ref, 'refs/tags/') || inputs.target == 'testpypi' || inputs.target == 'both'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/podracer_db/dist
+          repository-url: https://test.pypi.org/legacy/
+          # Test PyPI is disposable: re-runs re-upload the same version
+          # (e.g. after a CI fix). Skip instead of failing. PyPI stays
+          # strict — a duplicate there means a bad bump.
+          skip-existing: true
+      - name: Publish to PyPI
+        if: startsWith(github.ref, 'refs/tags/') || inputs.target == 'pypi' || inputs.target == 'both'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/podracer_db/dist
