@@ -34,7 +34,7 @@ nano 4G+ and classic 6G/7G (iTunesSD format) are planned.
 
 ## Systems
 
-Linux only, 64-bit: x86_64 (amd64) binaries, plus ARM64 (aarch64) via pip or the flatpak. Runs on any init system: systemd, OpenRC, runit, sysvinit. There is no systemd in the code; the device layer talks to the udisks2 daemon over D-Bus instead of udev or udisksctl. Non-systemd systems need udisks2 running and a desktop session to authorize mounts (elogind, or a local console login).
+Linux only, 64-bit: x86_64 (amd64) and ARM64 (aarch64) binaries, plus ARM64 via pip or the flatpak. ARM64 builds pass CI smoke tests but are not yet verified on real ARM hardware (no Pi or SBC on hand). Runs on any init system: systemd, OpenRC, runit, sysvinit. There is no systemd in the code; the device layer talks to the udisks2 daemon over D-Bus instead of udev or udisksctl. Non-systemd systems need udisks2 running and a desktop session to authorize mounts (elogind, or a local console login).
 
 Verified on systemd distros; Artix and Devuan are next on the test list.
 
@@ -47,7 +47,7 @@ Six of the thirteen built-in themes, rendered in demo mode (synthetic data only)
 ## Run it
 
 - From PyPI: `pipx install podracer_mapple` (or `pip install podracer_mapple` inside a venv), then launch `podracer` from a terminal.
-- From the repo: `scripts/build_onefile.sh` produces `./podracer` (one file, ~90 MB). Symlink it into your PATH: `ln -s "$PWD/podracer" ~/.local/bin/podracer`. Launch from a terminal or double-click.
+- From the repo: `scripts/build_onefile.sh` produces `./podracer` (one file, ~90 MB; `podracer-arm64` on ARM64). Symlink it into your PATH: `ln -s "$PWD/podracer" ~/.local/bin/podracer`. Launch from a terminal or double-click.
 - From source: `PYTHONPATH=src python3 -m podracer.main`
 
 > pip installs the app only. It still needs `ffmpeg` (tag reading + transcoding) and `udisksctl` (auto-mounting) on your system.

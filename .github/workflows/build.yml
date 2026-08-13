@@ -1,8 +1,9 @@
 name: build
 
-# Build the one-file Linux bundle and the Flatpak bundle on tags and
-# attach both to a release. The Flatpak references the freedesktop
-# runtime instead of bundling it, so the artifact stays small.
+# Build the one-file Linux bundles (x86_64 + ARM64) and the Flatpak
+# bundle on tags and attach them to a release. The Flatpak references
+# the freedesktop runtime instead of bundling it, so the artifact
+# stays small.
 on:
   push:
     tags: ["v*"]
@@ -41,12 +42,15 @@ jobs:
           path: podracer.flatpak
 
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runs-on }}
     needs: flatpak
-    # The Release step creates a GitHub Release; the default token is
-    # read-only, so the job must request write access to contents.
-    permissions:
-      contents: write
+    strategy:
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            binary: podracer
+          - runs-on: ubuntu-24.04-arm
+            binary: podracer-arm64
     steps:
       - uses: actions/checkout@v4
 
@@ -73,25 +77,45 @@ jobs:
         run: python3 -m unittest discover -s tests -t . -v
 
       - name: Build onefile bundle
-        run: bash scripts/build_onefile.sh
+        run: bash scripts/build_onefile.sh ${{ matrix.binary }}
 
       - name: Smoke test
         env:
           QT_QPA_PLATFORM: offscreen
-        run: ./podracer --smoke
+        run: ./${{ matrix.binary }} --smoke
 
-      - name: Download flatpak bundle
-        uses: actions/download-artifact@v4
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.binary }}
+          path: ${{ matrix.binary }}
+
+  release:
+    runs-on: ubuntu-latest
+    # One release for all three artifacts; a per-matrix-cell Release
+    # step would race. Dispatch runs are verification-only.
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [flatpak, build-linux]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: podracer
+          path: .
+      - uses: actions/download-artifact@v4
+        with:
+          name: podracer-arm64
+          path: .
+      - uses: actions/download-artifact@v4
         with:
           name: podracer-flatpak
-
+          path: .
       - name: Release
-        # Dispatch runs build for verification; releases only happen
-        # on v* tags (softprops errors without one).
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
             podracer
+            podracer-arm64
             podracer.flatpak
           name: PodRacer ${{ github.ref_name }}
