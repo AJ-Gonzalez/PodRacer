@@ -34,7 +34,7 @@ nano 4G+ and classic 6G/7G (iTunesSD format) are planned.
 
 ## Systems
 
-Linux only, and it runs on any init system: systemd, OpenRC, runit, sysvinit. There is no systemd in the code, and the device layer deliberately avoids udev (it polls `lsblk` instead). Mounting goes through the udisks2 daemon, so non-systemd systems need udisks2 running and a desktop session to authorize mounts (elogind, or a local console login).
+Linux only, 64-bit: x86_64 (amd64) binaries, plus ARM64 (aarch64) via pip or the flatpak. Runs on any init system: systemd, OpenRC, runit, sysvinit. There is no systemd in the code; the device layer talks to the udisks2 daemon over D-Bus instead of udev or udisksctl. Non-systemd systems need udisks2 running and a desktop session to authorize mounts (elogind, or a local console login).
 
 Verified on systemd distros; Artix and Devuan are next on the test list.
 
@@ -82,5 +82,6 @@ The write side is hardware-verified: a PodRacer-written DB boots on the real nan
 - ffmpeg for tagging and transcoding to MP3
 - `scripts/extract_fixtures.py` pulls the DB and sample tracks from a real iPod for tests
 - Tests: `python3 -m unittest discover -s tests -t . -v` (stdlib only)
+- Python floor: both dists declare `>=3.11` (CI runs 3.13); the onefile and flatpak bundle their own Python, so the floor only affects source and pip installs
 
 
