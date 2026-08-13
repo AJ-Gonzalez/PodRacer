@@ -1,11 +1,7 @@
-# PodRacer
-<table>
-<tr>
-<td>
-
-<img src="src/podracer/assets/podracer_icon.png" width="128" height="128" alt="PodRacer logo">
-</td>
-<td>
+<h1>
+<img src="src/podracer/assets/podracer_icon.png" width="48" height="48" alt="PodRacer logo" style="vertical-align: middle;">
+PodRacer
+</h1>
 
 <pre style="font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; font-style: italic;">
  ____           _ ____                     
@@ -15,22 +11,19 @@
 |_|   \___/ \__,_|_| \_\__,_|\___\___|_|  
 </pre>
 
-</td>
-</tr>
-</table>
 Transfer music to an iPod from Linux without iTunes. 
 
 **Plug in the iPod, open PodRacer, drag music over.**
 
 Midnight-commander-style two-pane UI: browse your music folder on the left, see what is on the iPod on the right. Manual sync, automatic duplicate avoidance, auto-transcode via ffmpeg.
 
-Targets the classic iTunesDB device family first: iPod nano 3G (the original target) plus nano 1-3G and classic 1-5.5G.
+Please note it targets the classic iTunesDB device family first: iPod nano 3G (the original target) plus nano 1-3G and classic 1-5.5G.
 
 ## Themes
 
 <img src="mockups/contact-sheet.png" width="800" alt="Six PodRacer themes: Grey Moonlight, Frutiger Aero, Aqua, Dark Aqua, Minty Forest, Lilac Love">
 
-Six of the thirteen built-in themes, rendered in demo mode (synthetic data only). Run `./podracer --demo` to preview any theme with a sample library — nothing real is touched.
+Six of the thirteen built-in themes, rendered in demo mode (synthetic data only). Run `./podracer --demo` to preview any theme with a mock library, nothing real is touched.
 
 ## Run it
 
