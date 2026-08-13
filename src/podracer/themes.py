@@ -675,6 +675,36 @@ def stoner_shore() -> Theme:
     )
 
 
+def carmillas_snack() -> Theme:
+    """Carmilla's Snack: blood-red shades, claret to near-black.
+
+    Palette as given (Blood Shades). Every color is a dark red, so
+    light text clears AA everywhere; the sweep runs the lightest red
+    down to the near-black, and the pale-rose panels keep it warmer
+    than pure white.
+    """
+    return Theme(
+        name="Carmilla's Snack",
+        colors={
+            "claret": "#851a1a",
+            "crimson-dark": "#7e0d0e",
+            "oxblood": "#710001",
+            "wine-dark": "#590001",
+            "near-black": "#410001",
+        },
+        window_gradient=("#851a1a", "#410001"),
+        accent="#851a1a",               # claret: white text clears AA
+        accent2="#7e0d0e",              # crimson-dark: focus/borders
+        panel_bg="#590001",             # wine-dark
+        panel_text="#ffd9d9",           # derived pale rose
+        text_on_accent="#ffffff",
+        status_bg="rgba(20, 0, 0, 0.45)",
+        status_text="#ffd9d9",
+        header_gradient=("#710001", "#410001"),
+        header_text="#ffd9d9",
+    )
+
+
 THEMES: list[Theme] = [
     magenta_daydream(),
     grey_moonlight(),
@@ -692,6 +722,7 @@ THEMES: list[Theme] = [
     lilac_love(),
     minty_forest(),
     stoner_shore(),
+    carmillas_snack(),
 ]
 
 
