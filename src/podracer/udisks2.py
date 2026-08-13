@@ -118,7 +118,8 @@ class UDisks2:
 
     def mount(self, device: str) -> str:
         fs = self._filesystem(device)
-        msg = fs.call("Mount", {}, "")
+        # udisks2 2.11 dropped the fstype parameter: Mount(a{sv}) only.
+        msg = fs.call("Mount", {})
         if not _is_ok(msg):
             raise DeviceError(f"mount failed: {msg.errorMessage()}")
         return str(msg.arguments()[0] or "")
