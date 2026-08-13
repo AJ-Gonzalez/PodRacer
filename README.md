@@ -45,8 +45,8 @@ Six of the thirteen built-in themes, rendered in demo mode (synthetic data only)
 
 ## Development
 
-- Python 3.13, PySide6 (Qt6) — UI (packages live under `src/`)
-- `podracer_db` — pure-stdlib iTunesDB codec
+- Python 3.13, PySide6 (Qt6) — UI (`src/`)
+- `podracer_db` — pure-stdlib iTunesDB codec (`packages/podracer_db/`, own PyPI dist)
 - ffmpeg — tagging + transcoding to MP3
 - `scripts/extract_fixtures.py` — pull the DB + sample tracks from a real iPod for tests
 - Tests: `python3 -m unittest discover -s tests -t . -v` (stdlib only)
