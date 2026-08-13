@@ -15,14 +15,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          manifest: io.github.ajgonzalez.PodRacer.yml
-          repo-url: https://flathub.org/repo/flathub.flatpakrepo
+          manifest-path: io.github.ajgonzalez.PodRacer.yml
+          bundle: podracer.flatpak
+          artifact-name: podracer-flatpak
+          repository-url: https://flathub.org/repo/flathub.flatpakrepo
+          branch: stable
           cache: true
-      - name: Bundle (runtime referenced, not bundled)
-        run: >
-          flatpak build-bundle
-          --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
-          repo podracer.flatpak io.github.ajgonzalez.PodRacer stable
       - name: Install and smoke inside the sandbox
         run: |
           flatpak --user remote-add --if-not-exists --no-gpg-verify podracer-repo repo
@@ -30,11 +28,6 @@ jobs:
           flatpak run --command=sh io.github.ajgonzalez.PodRacer -c \
             'command -v ffmpeg && command -v ffprobe && echo ffmpeg-ok'
           QT_QPA_PLATFORM=offscreen flatpak run io.github.ajgonzalez.PodRacer --smoke
-      - name: Upload bundle artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: podracer-flatpak
-          path: podracer.flatpak
 
   build-linux:
     runs-on: ubuntu-latest
