@@ -32,6 +32,12 @@ Midnight-commander-style two-pane UI: browse your music folder on the left, see 
 
 nano 4G+ and classic 6G/7G (iTunesSD format) are planned.
 
+## Systems
+
+Linux only, and it runs on any init system: systemd, OpenRC, runit, sysvinit. There is no systemd in the code, and the device layer deliberately avoids udev (it polls `lsblk` instead). Mounting goes through the udisks2 daemon, so non-systemd systems need udisks2 running and a desktop session to authorize mounts (elogind, or a local console login).
+
+Verified on systemd distros; Artix and Devuan are next on the test list.
+
 ## Themes
 
 <img src="mockups/contact-sheet.png" width="800" alt="Six PodRacer themes: Grey Moonlight, Frutiger Aero, Aqua, Dark Aqua, Minty Forest, Lilac Love">
