@@ -3,7 +3,7 @@
 
 a = Analysis(
     ['src/podracer/main.py'],
-    pathex=['src'],
+    pathex=['src', 'packages/podracer_db/src'],
     binaries=[],
     datas=[('src/podracer/fonts', 'podracer/fonts'), ('src/podracer/assets', 'podracer/assets')],
     hiddenimports=[],

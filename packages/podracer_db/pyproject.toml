@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "podracer_db"
+version = "1.0.0"
+description = "Pure-stdlib iTunesDB codec for the classic iPod family (parse + write)"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = []
+license-files = ["LICENSE"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["podracer_db"]

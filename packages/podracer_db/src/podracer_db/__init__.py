@@ -11,6 +11,8 @@ Public API:
     db_bytes = write_db(lib, firewire_guid="0011223344556677")
 """
 
+__version__ = "1.0.0"
+
 from .binary import FormatError
 from .hash58 import apply_hash58, compute_hash58
 from .model import FIRST_IPOD_ID, Library, Playlist, Track

@@ -7,7 +7,8 @@ SECONDS=0
 cd "$(dirname "$0")/.."
 
 pyinstaller --onefile --name podracer --clean --noconfirm \
-    --paths src --add-data "src/podracer/fonts:podracer/fonts" --add-data "src/podracer/assets:podracer/assets" src/podracer/main.py
+    --paths src --paths packages/podracer_db/src \
+    --add-data "src/podracer/fonts:podracer/fonts" --add-data "src/podracer/assets:podracer/assets" src/podracer/main.py
 
 cp dist/podracer ./podracer
 chmod +x ./podracer

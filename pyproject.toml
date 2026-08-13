@@ -3,24 +3,23 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-# App dist name. 'podracer' itself is taken by an unrelated podcast
-# library; the codec publishes separately as 'podracer_db' (own config
-# lands with the packaging work). Imports stay 'podracer'.
+# App dist name. 'podracer' itself is taken on PyPI by an unrelated
+# podcast library; the codec publishes separately as 'podracer_db'
+# (own pyproject under packages/podracer_db). Imports stay 'podracer'.
 name = "podracer_mapple"
-version = "0.1.0"
+version = "1.0.0"
 description = "Transfer music to an iPod from Linux, no iTunes"
 license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = [
     "PySide6>=6.6",
+    "podracer_db>=1.0.0",
 ]
-
-[project.license-files]
-files = ["LICENSE"]
+license-files = ["LICENSE"]
 
 [project.scripts]
 podracer = "podracer.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["podracer*", "podracer_db*"]
+include = ["podracer"]
