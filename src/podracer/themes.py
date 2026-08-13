@@ -705,6 +705,36 @@ def carmillas_snack() -> Theme:
     )
 
 
+def sakura_light() -> Theme:
+    """Sakura Light: pale sakura pinks with deep-plum text.
+
+    Palette as given (sakuras). A light theme: petal-pink sweep,
+    blossom-deep accent. The pinks are all light or medium, so the
+    text runs dark plum (white on the darkest pink fails AA at ~3.1);
+    the accent clears AA at ~7.7 with the deep plum.
+    """
+    return Theme(
+        name="Sakura Light",
+        colors={
+            "petal-light": "#efd0e5",
+            "petal": "#e6c3db",
+            "blossom": "#daabcb",
+            "blossom-deep": "#d29ec2",
+            "twig": "#be7fab",
+        },
+        window_gradient=("#efd0e5", "#daabcb"),
+        accent="#d29ec2",               # blossom-deep: dark plum text
+        accent2="#be7fab",              # twig: focus/borders
+        panel_bg="#efd0e5",             # petal-light
+        panel_text="#3a1f2e",           # derived plum
+        text_on_accent="#2b1420",       # derived deep plum
+        status_bg="rgba(190, 127, 171, 0.35)",
+        status_text="#3a1f2e",
+        header_gradient=("#e6c3db", "#d29ec2"),
+        header_text="#2b1420",
+    )
+
+
 THEMES: list[Theme] = [
     magenta_daydream(),
     grey_moonlight(),
@@ -723,6 +753,7 @@ THEMES: list[Theme] = [
     minty_forest(),
     stoner_shore(),
     carmillas_snack(),
+    sakura_light(),
 ]
 
 
