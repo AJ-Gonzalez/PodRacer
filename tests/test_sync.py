@@ -116,6 +116,11 @@ class SyncSessionTests(unittest.TestCase):
 
     def test_set_metadata_clear_and_whitespace(self):
         track = self.session.tracks[0]
+        # Seed values first: the seed track may or may not carry a genre
+        # or album (real fixture locally vs synthetic on CI), and
+        # clearing an already-empty tag is a no-op (returns False).
+        self.assertTrue(self.session.set_metadata(
+            track, genre="Set", album="Set Album"))
         self.assertTrue(self.session.set_metadata(track, genre=""))
         self.assertIsNone(track.genre)
         self.assertTrue(self.session.set_metadata(track, album="   "))

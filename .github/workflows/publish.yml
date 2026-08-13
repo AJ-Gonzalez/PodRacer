@@ -73,6 +73,10 @@ jobs:
         with:
           packages-dir: packages/podracer_db/dist
           repository-url: https://test.pypi.org/legacy/
+          # Test PyPI is disposable: re-runs re-upload the same version
+          # (e.g. after a CI fix). Skip instead of failing. PyPI stays
+          # strict — a duplicate there means a bad bump.
+          skip-existing: true
       - name: Publish to PyPI
         if: startsWith(github.ref, 'refs/tags/') || inputs.target == 'pypi' || inputs.target == 'both'
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -134,6 +138,7 @@ jobs:
         with:
           packages-dir: dist
           repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
       - name: Publish to PyPI
         if: startsWith(github.ref, 'refs/tags/') || inputs.target == 'pypi' || inputs.target == 'both'
         uses: pypa/gh-action-pypi-publish@release/v1
