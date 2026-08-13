@@ -27,6 +27,7 @@ def _icon_path() -> Path:
 # Absolute import: this file also runs as a bare script inside the
 # onefile bundle, where relative imports have no parent package.
 from podracer.themes import THEMES, apply_theme
+from podracer.udisks2 import UDisks2
 from podracer.ui import MainWindow
 
 
@@ -49,10 +50,14 @@ def main() -> int:
             "Install it with: sudo zypper install ffmpeg",
         )
         return 1
-    if not shutil.which("udisksctl"):
+    # The device layer talks to the udisks2 daemon over D-Bus (no
+    # udisksctl binary). Smoke/demo modes never touch devices and must
+    # run on CI runners that do not have the daemon up.
+    if "--smoke" not in app.arguments() and "--demo" not in app.arguments() \
+            and not UDisks2().reachable():
         QMessageBox.critical(
             None, "PodRacer",
-            "udisksctl is not installed, so the iPod cannot be mounted.\n"
+            "udisks2 is not reachable, so the iPod cannot be mounted.\n"
             "Install it with: sudo zypper install udisks2",
         )
         return 1

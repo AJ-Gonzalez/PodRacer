@@ -65,6 +65,34 @@ class SysInfoTests(unittest.TestCase):
 
 
 
+class FakeTransport:
+    """Canned udisks2 transport for device tests (no D-Bus, no Qt)."""
+
+    def __init__(self, partitions=(), block_device_map=None,
+                 mount_result="/run/media/u/HYPERPINK"):
+        self._partitions = list(partitions)
+        self._block_device_map = block_device_map or {}
+        self.mount_result = mount_result
+        self.mounted: list[str] = []
+        self.unmounted: list[str] = []
+
+    def partitions(self):
+        return list(self._partitions)
+
+    def block_device_for(self, mountpoint):
+        return self._block_device_map.get(str(mountpoint))
+
+    def mount(self, device):
+        self.mounted.append(device)
+        return self.mount_result
+
+    def unmount(self, device):
+        self.unmounted.append(device)
+
+    def reachable(self):
+        return True
+
+
 class DeviceTests(unittest.TestCase):
     def test_mounted_ipods_finds_ipod_control(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -78,22 +106,61 @@ class DeviceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(device.mounted_ipods(Path(tmp)), [])
 
-    def test_apple_partitions_filter(self):
-        lsblk = [
-            {"name": "sda", "vendor": None, "children": []},
-            {
-                "name": "sdb",
-                "vendor": "Apple   ",
-                "model": "iPod",
-                "children": [
-                    {"name": "sdb1", "label": "HYPERPINK", "mountpoint": "/run/media/u/HYPERPINK"},
-                ],
-            },
-            {"name": "sdc", "vendor": "SanDisk", "children": []},
-        ]
-        self.assertEqual(
-            device._apple_partitions(lsblk), [("sdb1", "HYPERPINK")]
-        )
+    def test_apple_partitions_filters_vendor(self):
+        fake = FakeTransport(partitions=[
+            device.Partition("sdb1", "HYPERPINK", "Apple"),
+            device.Partition("sdb2", "RECOVERY", "Apple   "),
+            device.Partition("sdc1", "STICK", "SanDisk"),
+        ])
+        with mock.patch.object(device, "_get_transport", return_value=fake):
+            self.assertEqual(
+                device._apple_partitions(),
+                [("sdb1", "HYPERPINK"), ("sdb2", "RECOVERY")],
+            )
+
+    def test_block_device_for_uses_transport(self):
+        fake = FakeTransport(
+            block_device_map={"/run/media/u/HYPERPINK": "sdb1"})
+        with mock.patch.object(device, "_get_transport", return_value=fake):
+            self.assertEqual(
+                device._block_device_for(Path("/run/media/u/HYPERPINK")),
+                "sdb1",
+            )
+
+    def test_mount_ipod_uses_transport(self):
+        fake = FakeTransport(partitions=[
+            device.Partition("sdb1", "HYPERPINK", "Apple"),
+        ])
+        with tempfile.TemporaryDirectory() as tmp, \
+             mock.patch.object(device, "_get_transport", return_value=fake), \
+             mock.patch.object(device, "mounted_ipods", return_value=[]):
+            ipod = device.mount_ipod()
+            self.assertEqual(fake.mounted, ["sdb1"])
+            self.assertEqual(ipod.block_device, "sdb1")
+            self.assertEqual(ipod.label, "HYPERPINK")
+            self.assertEqual(ipod.mountpoint, Path(fake.mount_result))
+
+    def test_mount_ipod_no_drive_raises(self):
+        fake = FakeTransport(partitions=[])
+        with mock.patch.object(device, "_get_transport", return_value=fake):
+            with self.assertRaises(device.DeviceError):
+                device.mount_ipod()
+
+    def test_unmount_ipod_uses_transport(self):
+        fake = FakeTransport()
+        ipod = device.IPod(mountpoint=Path("/run/media/u/HYPERPINK"),
+                           block_device="sdb1")
+        with mock.patch.object(device, "_get_transport", return_value=fake):
+            device.unmount_ipod(ipod)
+        self.assertEqual(fake.unmounted, ["sdb1"])
+
+    def test_unmount_ipod_resolves_device_via_transport(self):
+        fake = FakeTransport(
+            block_device_map={"/run/media/u/HYPERPINK": "sdb1"})
+        ipod = device.IPod(mountpoint=Path("/run/media/u/HYPERPINK"))
+        with mock.patch.object(device, "_get_transport", return_value=fake):
+            device.unmount_ipod(ipod)
+        self.assertEqual(fake.unmounted, ["sdb1"])
 
     def test_current_ipod_matches_mount_by_label(self):
         with tempfile.TemporaryDirectory() as tmp:
