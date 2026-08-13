@@ -14,10 +14,17 @@ transport without D-Bus.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtDBus import QDBusConnection, QDBusInterface, QDBusMessage
+from PySide6.QtDBus import (
+    QDBusArgument,
+    QDBusConnection,
+    QDBusInterface,
+    QDBusMessage,
+    QDBusObjectPath,
+)
 
 SERVICE = "org.freedesktop.UDisks2"
 MANAGER_PATH = "/org/freedesktop/UDisks2"
@@ -46,6 +53,77 @@ def _is_ok(msg: QDBusMessage) -> bool:
     return msg.type() == QDBusMessage.MessageType.ReplyMessage
 
 
+def _unwrap(value):
+    """Recursively unwrap PySide6 QDBusArgument containers to Python.
+
+    PySide6 hands compound D-Bus signatures (arrays, maps, structures,
+    variants) back as QDBusArgument objects that are not directly
+    usable, and QDBusObjectPath has no useful __str__ (it returns the
+    repr). This converts them into plain lists/dicts/strings.
+    """
+    if isinstance(value, QDBusArgument):
+        kind = value.currentType()
+        if kind == QDBusArgument.ElementType.ArrayType:
+            out = []
+            value.beginArray()
+            while not value.atEnd():
+                out.append(_unwrap(value.asVariant()))
+            value.endArray()
+            return out
+        if kind == QDBusArgument.ElementType.MapType:
+            out = {}
+            value.beginMap()
+            while not value.atEnd():
+                value.beginMapEntry()
+                key = _unwrap(value.asVariant())
+                val = _unwrap(value.asVariant())
+                value.endMapEntry()
+                out[key] = val
+            value.endMap()
+            return out
+        if kind == QDBusArgument.ElementType.StructureType:
+            out = []
+            value.beginStructure()
+            while not value.atEnd():
+                out.append(_unwrap(value.asVariant()))
+            value.endStructure()
+            return out
+        if kind == QDBusArgument.ElementType.VariantType:
+            return _unwrap(value.asVariant())
+        return value
+    if isinstance(value, QDBusObjectPath):
+        return value.path()
+    return value
+
+
+_manager_path: str | None = None
+
+
+def _manager_object_path() -> str:
+    """Path of the object exposing org.freedesktop.UDisks2.Manager.
+
+    udisks2 2.11 moved the Manager interface from the root object
+    (/org/freedesktop/UDisks2) to /org/freedesktop/UDisks2/Manager;
+    older releases keep it on the root. Discover via Introspect XML
+    (a plain string, unlike GetManagedObjects which PySide6 hands back
+    as a QDBusArgument); fall back to the classic path on failure.
+    """
+    global _manager_path
+    if _manager_path is not None:
+        return _manager_path
+    manager = MANAGER_PATH
+    root = _interface(MANAGER_PATH, "org.freedesktop.DBus.Introspectable")
+    msg = root.call("Introspect")
+    if _is_ok(msg):
+        xml = str(msg.arguments()[0])
+        if re.search(r'<node name="Manager"[ />]', xml):
+            manager = f"{MANAGER_PATH}/Manager"
+        elif 'interface name="org.freedesktop.UDisks2.Manager"' in xml:
+            manager = MANAGER_PATH
+    _manager_path = manager
+    return manager
+
+
 class UDisks2:
     """udisks2 D-Bus client: block listing, mount, unmount."""
 
@@ -53,7 +131,7 @@ class UDisks2:
         out: list[Partition] = []
         for path in self._block_paths():
             block = _interface(path, "org.freedesktop.UDisks2.Block")
-            drive_path = str(block.property("Drive") or "/")
+            drive_path = _unwrap(block.property("Drive")) or "/"
             vendor = ""
             if drive_path not in ("", "/"):
                 drive = _interface(drive_path, "org.freedesktop.UDisks2.Drive")
@@ -97,7 +175,8 @@ class UDisks2:
         conn = QDBusConnection.systemBus()
         if not conn.isConnected():
             return False
-        manager = _interface(MANAGER_PATH, "org.freedesktop.UDisks2.Manager")
+        manager = _interface(_manager_object_path(),
+                             "org.freedesktop.UDisks2.Manager")
         return _is_ok(manager.call("GetBlockDevices", {}))
 
     # -- internals ------------------------------------------------------
@@ -111,15 +190,16 @@ class UDisks2:
                           "org.freedesktop.UDisks2.Filesystem")
 
     def _block_paths(self) -> list[str]:
-        manager = _interface(MANAGER_PATH, "org.freedesktop.UDisks2.Manager")
+        manager = _interface(_manager_object_path(),
+                             "org.freedesktop.UDisks2.Manager")
         msg = manager.call("GetBlockDevices", {})
         if not _is_ok(msg):
             raise DeviceError(f"udisks2 not reachable: {msg.errorMessage()}")
-        return [str(p) for p in msg.arguments()[0]]
+        return _unwrap(msg.arguments()[0])
 
     @staticmethod
     def _mountpoints(fs: QDBusInterface) -> list[str]:
-        value = fs.property("MountPoints")
+        value = _unwrap(fs.property("MountPoints"))
         if not isinstance(value, list):
             return []
         out: list[str] = []
