@@ -126,6 +126,10 @@ class SyncSessionTests(unittest.TestCase):
         self.assertTrue(self.session.set_metadata(track, album="   "))
         self.assertIsNone(track.album)
 
+    def test_rename_device_sets_master_playlist_title(self):
+        self.session.rename_device("STONER")
+        self.assertEqual(self.session.device_name, "STONER")
+
     def test_set_metadata_bulk_applies_to_all(self):
         tracks = self.session.tracks[:2]
         changed = self.session.set_metadata_bulk(

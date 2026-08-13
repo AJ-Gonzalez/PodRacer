@@ -646,6 +646,35 @@ def minty_forest() -> Theme:
     )
 
 
+def stoner_shore() -> Theme:
+    """Stoner Shore: sea-glass teal over deep slate, salmon surf accent.
+
+    Palette as given by the user. Sea glass is light enough to need
+    dark text (white fails AA); the header runs salmon -> sea glass
+    with the same deep-sea text; the slate -> teal sweep carries the
+    near-white panels.
+    """
+    return Theme(
+        name="Stoner Shore",
+        colors={
+            "salmon": "#ee8572",
+            "slate": "#35495e",
+            "teal": "#347474",
+            "sea-glass": "#63b7af",
+        },
+        window_gradient=("#35495e", "#347474"),
+        accent="#63b7af",               # sea glass: dark text
+        accent2="#ee8572",              # salmon: focus/borders
+        panel_bg="#2d3d4e",             # derived deeper slate
+        panel_text="#eef3f6",           # derived near-white
+        text_on_accent="#173a3d",       # derived deep sea
+        status_bg="rgba(16, 27, 38, 0.45)",
+        status_text="#eef3f6",
+        header_gradient=("#ee8572", "#63b7af"),   # the surf
+        header_text="#173a3d",
+    )
+
+
 THEMES: list[Theme] = [
     magenta_daydream(),
     grey_moonlight(),
@@ -662,6 +691,7 @@ THEMES: list[Theme] = [
     just_blues(),
     lilac_love(),
     minty_forest(),
+    stoner_shore(),
 ]
 
 

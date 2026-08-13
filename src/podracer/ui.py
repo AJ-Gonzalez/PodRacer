@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
     QFileSystemModel,
     QHBoxLayout,
     QHeaderView,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QListWidget,
@@ -466,8 +467,17 @@ class MainWindow(QMainWindow):
         # addWidget() returns None in PySide6: build the widgets first.
         self.device_label = QPushButton("No iPod", self)
         self.device_label.setFlat(True)
-        self.device_label.setToolTip("Click to find and mount the iPod.")
+        self.device_label.setToolTip(
+            "Click to find and mount the iPod.\n"
+            "Right-click to rename it."
+        )
         self.device_label.clicked.connect(self._find_ipod)
+        self.device_label.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.device_label.customContextMenuRequested.connect(
+            self._show_device_menu
+        )
         self.track_count = QPushButton("", self)
         self.track_count.setFlat(True)
         self.track_count.setEnabled(False)
@@ -691,6 +701,50 @@ class MainWindow(QMainWindow):
             except Exception as exc:  # corrupt DB etc.
                 self._status(f"Could not read the iPod: {exc}")
                 self.session = None
+        self._refresh_after_change()
+
+    def _show_device_menu(self, pos) -> None:
+        menu = QMenu(self)
+        rename = menu.addAction("Rename device…")
+        rename.setEnabled(self.session is not None)
+        rename.triggered.connect(self._rename_device)
+        menu.exec(self.device_label.mapToGlobal(pos))
+
+    def _rename_device(self) -> None:
+        if self.session is None or self._transfer_running():
+            return
+        name, ok = QInputDialog.getText(
+            self, "Rename device",
+            "New device name (11 characters max, the FAT volume "
+            "label limit):",
+            text=self.session.device_name,
+        )
+        if not ok:
+            return
+        name = name.strip()
+        if not name or len(name) > 11:
+            self._status("Device name must be 1-11 characters.")
+            return
+        self._apply_rename(name)
+
+    def _apply_rename(self, name: str) -> None:
+        """Dialog-free rename: master playlist title + FAT volume label."""
+        if self.session is None:
+            return
+        self.session.rename_device(name)
+        self._dirty = True
+        try:
+            device.rename_label(self.session.ipod, name)
+        except device.DeviceError as exc:
+            self._status(
+                f"Renamed in the library, but the volume label "
+                f"failed: {exc}"
+            )
+        else:
+            self._status(
+                f"Renamed to '{name}' — Sync writes it; the folder "
+                "name changes on the next plug-in."
+            )
         self._refresh_after_change()
 
     def _find_ipod(self) -> None:

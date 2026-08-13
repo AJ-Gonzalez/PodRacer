@@ -134,6 +134,17 @@ class SyncSession:
                 changed += 1
         return changed
 
+    def rename_device(self, new_name: str) -> None:
+        """Rename the device: the master playlist title is what the
+        iPod shows on screen. The FAT volume label is a separate
+        device-level rename (device.rename_label); it changes the
+        mount-point name after the next plug-in. The new name reaches
+        the device DB on sync(), like every other edit.
+        """
+        mpl = self.lib.master_playlist()
+        if mpl is not None:
+            mpl.name = new_name
+
     def sync(self) -> None:
         """Write the library to the device now; keep it mounted.
 

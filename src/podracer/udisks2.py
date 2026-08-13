@@ -86,6 +86,13 @@ class UDisks2:
         if not _is_ok(msg):
             raise DeviceError(f"unmount failed: {msg.errorMessage()}")
 
+    def set_label(self, device: str, label: str) -> None:
+        """Rename the filesystem volume label (FAT label for the iPod)."""
+        fs = self._filesystem(device)
+        msg = fs.call("SetLabel", label, {})
+        if not _is_ok(msg):
+            raise DeviceError(f"rename label failed: {msg.errorMessage()}")
+
     def reachable(self) -> bool:
         conn = QDBusConnection.systemBus()
         if not conn.isConnected():

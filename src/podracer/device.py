@@ -189,3 +189,17 @@ def unmount_ipod(ipod: IPod) -> None:
     if device is None:
         raise DeviceError(f"no block device for {ipod.mountpoint}")
     _get_transport().unmount(device)
+
+
+def rename_label(ipod: IPod, new_label: str) -> None:
+    """Rename the FAT volume label via udisks2.
+
+    The mount-point name follows on the next plug-in; the on-screen
+    device name (master playlist title) is a separate library-state
+    change. Call after renaming the library state so the two stay in
+    step, but a failure here must not block the rename itself.
+    """
+    device = ipod.block_device or _block_device_for(ipod.mountpoint)
+    if device is None:
+        raise DeviceError(f"no block device for {ipod.mountpoint}")
+    _get_transport().set_label(device, new_label)

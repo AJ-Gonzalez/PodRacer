@@ -9,6 +9,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from PySide6.QtCore import QEvent, QMimeData, QPointF, Qt, QUrl
 from PySide6.QtGui import QDropEvent, QKeyEvent
@@ -357,6 +358,26 @@ class MetadataEditTests(_QtCase):
             win._apply_bulk_metadata(rows, {})
             self.assertFalse(win._dirty)
         finally:
+            win.session.close()
+            win.close()
+            tmp.cleanup()
+
+    def test_apply_rename_renames_session_and_label(self):
+        from podracer import device as device_mod
+
+        win, tmp = self._make_window_with_session()
+        try:
+            with mock.patch.object(
+                device_mod, "rename_label"
+            ) as rename_label:
+                win._apply_rename("STONER")
+            self.assertEqual(win.session.device_name, "STONER")
+            self.assertTrue(win._dirty)
+            rename_label.assert_called_once_with(
+                win.session.ipod, "STONER")
+            self.assertEqual(win.device_label.text(), "STONER")
+        finally:
+            win._dirty = False  # closeEvent would open the quit-guard modal
             win.session.close()
             win.close()
             tmp.cleanup()

@@ -75,6 +75,7 @@ class FakeTransport:
         self.mount_result = mount_result
         self.mounted: list[str] = []
         self.unmounted: list[str] = []
+        self.labels: list[tuple[str, str]] = []
 
     def partitions(self):
         return list(self._partitions)
@@ -88,6 +89,9 @@ class FakeTransport:
 
     def unmount(self, device):
         self.unmounted.append(device)
+
+    def set_label(self, device, label):
+        self.labels.append((device, label))
 
     def reachable(self):
         return True
@@ -161,6 +165,22 @@ class DeviceTests(unittest.TestCase):
         with mock.patch.object(device, "_get_transport", return_value=fake):
             device.unmount_ipod(ipod)
         self.assertEqual(fake.unmounted, ["sdb1"])
+
+    def test_rename_label_uses_transport(self):
+        fake = FakeTransport()
+        ipod = device.IPod(mountpoint=Path("/run/media/u/HYPERPINK"),
+                           block_device="sdb1")
+        with mock.patch.object(device, "_get_transport", return_value=fake):
+            device.rename_label(ipod, "STONER")
+        self.assertEqual(fake.labels, [("sdb1", "STONER")])
+
+    def test_rename_label_resolves_device_via_transport(self):
+        fake = FakeTransport(
+            block_device_map={"/run/media/u/HYPERPINK": "sdb1"})
+        ipod = device.IPod(mountpoint=Path("/run/media/u/HYPERPINK"))
+        with mock.patch.object(device, "_get_transport", return_value=fake):
+            device.rename_label(ipod, "STONER")
+        self.assertEqual(fake.labels, [("sdb1", "STONER")])
 
     def test_current_ipod_matches_mount_by_label(self):
         with tempfile.TemporaryDirectory() as tmp:
