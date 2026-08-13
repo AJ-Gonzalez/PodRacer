@@ -39,11 +39,11 @@ class Transport(Protocol):
 
     def partitions(self) -> list[Partition]: ...
 
-    def block_device_for(self, mountpoint: Path) -> str | None: ...
-
     def mount(self, device: str) -> str: ...
 
     def unmount(self, device: str) -> None: ...
+
+    def set_label(self, device: str, label: str) -> None: ...
 
     def reachable(self) -> bool: ...
 
@@ -106,7 +106,42 @@ def _apple_partitions() -> list[tuple[str, str]]:
 
 
 def _block_device_for(mountpoint: Path) -> str | None:
-    return _get_transport().block_device_for(mountpoint)
+    """Block device behind @mountpoint, from the kernel's mountinfo.
+
+    Ground truth and immune to udisks2 view drift (e.g. SetLabel drops
+    the old mountpoint from udisks2's view mid-session); udisks2's own
+    MountPoints property is an aay that PySide6 wraps unusably.
+    """
+    return _mountinfo_device(mountpoint)
+
+
+def _mountinfo_device(mountpoint: Path) -> str | None:
+    try:
+        text = Path("/proc/self/mountinfo").read_text()
+    except OSError:
+        return None
+    return _parse_mountinfo(text, str(mountpoint))
+
+
+def _parse_mountinfo(text: str, target: str) -> str | None:
+    """Block device name behind @target, per mountinfo syntax.
+
+    Fields: id parent major:minor root mountpoint options [..] - fstype
+    source super-options; mountpoint escapes spaces as \\040.
+    """
+    for line in text.splitlines():
+        parts = line.split()
+        if len(parts) < 10:
+            continue
+        if parts[4].replace("\\040", " ") != target:
+            continue
+        try:
+            source = parts[parts.index("-") + 2]
+        except (ValueError, IndexError):
+            continue
+        if source.startswith("/dev/"):
+            return source.removeprefix("/dev/")
+    return None
 
 
 def _fill_identity(ipod: IPod) -> None:
@@ -153,14 +188,17 @@ def auto_mount() -> IPod | None:
 
     Returns None when no Apple drive is present; mounts the first
     Apple partition via udisks2 when it is plugged in but unmounted.
-    Raises DeviceError when the mount fails.
+    Raises DeviceError when the mount fails. The matched partition's
+    block device is cached on the IPod so later device operations
+    (eject, rename) never re-resolve through udisks2's changing view.
     """
     partitions = _apple_partitions()
     if not partitions:
         return None
-    labels = {label for _device, label in partitions}
+    labels = {label: device for device, label in partitions}
     for ipod in mounted_ipods():
         if ipod.label and ipod.label in labels:
+            ipod.block_device = labels[ipod.label]
             _fill_identity(ipod)
             return ipod
     return mount_ipod()
@@ -197,9 +235,13 @@ def rename_label(ipod: IPod, new_label: str) -> None:
     The mount-point name follows on the next plug-in; the on-screen
     device name (master playlist title) is a separate library-state
     change. Call after renaming the library state so the two stay in
-    step, but a failure here must not block the rename itself.
+    step, but a failure here must not block the rename itself. The
+    resolved block device is cached on @ipod: SetLabel changes
+    udisks2's view of the filesystem, so a later re-resolution by
+    mountpoint (eject) would fail.
     """
     device = ipod.block_device or _block_device_for(ipod.mountpoint)
     if device is None:
         raise DeviceError(f"no block device for {ipod.mountpoint}")
+    ipod.block_device = device
     _get_transport().set_label(device, new_label)

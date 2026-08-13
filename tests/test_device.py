@@ -68,10 +68,8 @@ class SysInfoTests(unittest.TestCase):
 class FakeTransport:
     """Canned udisks2 transport for device tests (no D-Bus, no Qt)."""
 
-    def __init__(self, partitions=(), block_device_map=None,
-                 mount_result="/run/media/u/HYPERPINK"):
+    def __init__(self, partitions=(), mount_result="/run/media/u/HYPERPINK"):
         self._partitions = list(partitions)
-        self._block_device_map = block_device_map or {}
         self.mount_result = mount_result
         self.mounted: list[str] = []
         self.unmounted: list[str] = []
@@ -79,9 +77,6 @@ class FakeTransport:
 
     def partitions(self):
         return list(self._partitions)
-
-    def block_device_for(self, mountpoint):
-        return self._block_device_map.get(str(mountpoint))
 
     def mount(self, device):
         self.mounted.append(device)
@@ -122,10 +117,23 @@ class DeviceTests(unittest.TestCase):
                 [("sdb1", "HYPERPINK"), ("sdb2", "RECOVERY")],
             )
 
-    def test_block_device_for_uses_transport(self):
-        fake = FakeTransport(
-            block_device_map={"/run/media/u/HYPERPINK": "sdb1"})
-        with mock.patch.object(device, "_get_transport", return_value=fake):
+    def test_parse_mountinfo_finds_device(self):
+        text = (
+            "36 35 98:0 / / rw,relatime shared:1 - ext4 /dev/sda2 rw\n"
+            "40 36 98:1 / /run/media/alicia/HYPERPINK rw,nosuid "
+            "shared:2 - vfat /dev/sdb1 rw\n"
+        )
+        self.assertEqual(
+            device._parse_mountinfo(text, "/run/media/alicia/HYPERPINK"),
+            "sdb1",
+        )
+        self.assertEqual(device._parse_mountinfo(text, "/"), "sda2")
+        self.assertIsNone(device._parse_mountinfo(text, "/mnt/nowhere"))
+
+    def test_block_device_for_uses_mountinfo(self):
+        with mock.patch.object(
+            device, "_mountinfo_device", return_value="sdb1"
+        ):
             self.assertEqual(
                 device._block_device_for(Path("/run/media/u/HYPERPINK")),
                 "sdb1",
@@ -158,11 +166,12 @@ class DeviceTests(unittest.TestCase):
             device.unmount_ipod(ipod)
         self.assertEqual(fake.unmounted, ["sdb1"])
 
-    def test_unmount_ipod_resolves_device_via_transport(self):
-        fake = FakeTransport(
-            block_device_map={"/run/media/u/HYPERPINK": "sdb1"})
+    def test_unmount_ipod_resolves_device_via_mountinfo(self):
+        fake = FakeTransport()
         ipod = device.IPod(mountpoint=Path("/run/media/u/HYPERPINK"))
-        with mock.patch.object(device, "_get_transport", return_value=fake):
+        with mock.patch.object(device, "_get_transport", return_value=fake), \
+             mock.patch.object(device, "_mountinfo_device",
+                               return_value="sdb1"):
             device.unmount_ipod(ipod)
         self.assertEqual(fake.unmounted, ["sdb1"])
 
@@ -174,12 +183,14 @@ class DeviceTests(unittest.TestCase):
             device.rename_label(ipod, "STONER")
         self.assertEqual(fake.labels, [("sdb1", "STONER")])
 
-    def test_rename_label_resolves_device_via_transport(self):
-        fake = FakeTransport(
-            block_device_map={"/run/media/u/HYPERPINK": "sdb1"})
+    def test_rename_label_caches_block_device(self):
+        fake = FakeTransport()
         ipod = device.IPod(mountpoint=Path("/run/media/u/HYPERPINK"))
-        with mock.patch.object(device, "_get_transport", return_value=fake):
+        with mock.patch.object(device, "_get_transport", return_value=fake), \
+             mock.patch.object(device, "_mountinfo_device",
+                               return_value="sdb1"):
             device.rename_label(ipod, "STONER")
+        self.assertEqual(ipod.block_device, "sdb1")
         self.assertEqual(fake.labels, [("sdb1", "STONER")])
 
     def test_current_ipod_matches_mount_by_label(self):
@@ -220,6 +231,7 @@ class DeviceTests(unittest.TestCase):
              mock.patch.object(device, "mount_ipod") as mount:
             found = device.auto_mount()
             self.assertIs(found, ipod)
+            self.assertEqual(found.block_device, "sdb1")
             mount.assert_not_called()
 
     def test_auto_mount_mounts_unmounted_drive(self):

@@ -54,43 +54,16 @@ def _is_ok(msg: QDBusMessage) -> bool:
 
 
 def _unwrap(value):
-    """Recursively unwrap PySide6 QDBusArgument containers to Python.
+    """Convert a QDBusObjectPath to its path string.
 
-    PySide6 hands compound D-Bus signatures (arrays, maps, structures,
-    variants) back as QDBusArgument objects that are not directly
-    usable, and QDBusObjectPath has no useful __str__ (it returns the
-    repr). This converts them into plain lists/dicts/strings.
+    QDBusObjectPath has no useful __str__ (it returns the repr).
+    Deliberately the only unwrap: PySide6's QDBusArgument read API is
+    a trap (begin* emits "write from a read-only object" and asVariant
+    without it returns the container itself, recursing), so the
+    transport reads no compound D-Bus types at all: block listing comes
+    from Introspect XML strings and mountpoint resolution from kernel
+    mountinfo (see device.py).
     """
-    if isinstance(value, QDBusArgument):
-        kind = value.currentType()
-        if kind == QDBusArgument.ElementType.ArrayType:
-            out = []
-            value.beginArray()
-            while not value.atEnd():
-                out.append(_unwrap(value.asVariant()))
-            value.endArray()
-            return out
-        if kind == QDBusArgument.ElementType.MapType:
-            out = {}
-            value.beginMap()
-            while not value.atEnd():
-                value.beginMapEntry()
-                key = _unwrap(value.asVariant())
-                val = _unwrap(value.asVariant())
-                value.endMapEntry()
-                out[key] = val
-            value.endMap()
-            return out
-        if kind == QDBusArgument.ElementType.StructureType:
-            out = []
-            value.beginStructure()
-            while not value.atEnd():
-                out.append(_unwrap(value.asVariant()))
-            value.endStructure()
-            return out
-        if kind == QDBusArgument.ElementType.VariantType:
-            return _unwrap(value.asVariant())
-        return value
     if isinstance(value, QDBusObjectPath):
         return value.path()
     return value
@@ -143,14 +116,6 @@ class UDisks2:
             ))
         return out
 
-    def block_device_for(self, mountpoint: Path) -> str | None:
-        target = str(mountpoint)
-        for path in self._block_paths():
-            fs = _interface(path, "org.freedesktop.UDisks2.Filesystem")
-            if target in self._mountpoints(fs):
-                return path.rsplit("/", 1)[-1]
-        return None
-
     def mount(self, device: str) -> str:
         fs = self._filesystem(device)
         msg = fs.call("Mount", {}, "")
@@ -190,22 +155,19 @@ class UDisks2:
                           "org.freedesktop.UDisks2.Filesystem")
 
     def _block_paths(self) -> list[str]:
-        manager = _interface(_manager_object_path(),
-                             "org.freedesktop.UDisks2.Manager")
-        msg = manager.call("GetBlockDevices", {})
+        """Block device object paths via Introspect XML.
+
+        GetBlockDevices returns an array-of-object-paths, which PySide6
+        wraps in a QDBusArgument whose read API is unusable without
+        spurious warnings; the Introspect XML walk returns plain
+        strings and lists the same devices.
+        """
+        node = _interface(BLOCK_DEVICES, "org.freedesktop.DBus.Introspectable")
+        msg = node.call("Introspect")
         if not _is_ok(msg):
             raise DeviceError(f"udisks2 not reachable: {msg.errorMessage()}")
-        return _unwrap(msg.arguments()[0])
-
-    @staticmethod
-    def _mountpoints(fs: QDBusInterface) -> list[str]:
-        value = _unwrap(fs.property("MountPoints"))
-        if not isinstance(value, list):
-            return []
-        out: list[str] = []
-        for raw in value:
-            try:
-                out.append(bytes(raw).decode("utf-8", "replace"))
-            except (TypeError, ValueError):
-                continue
-        return out
+        xml = str(msg.arguments()[0])
+        return [
+            f"{BLOCK_DEVICES}/{name}"
+            for name in re.findall(r'<node name="([^"]+)"', xml)
+        ]
