@@ -22,7 +22,24 @@ from PySide6.QtWidgets import (
 from podracer_db.model import Track
 from podracer.fonts import FONT_OPTIONS, MAX_SIZE, MIN_SIZE
 from podracer.themes import THEMES
-from podracer.ui import LibraryView, MainWindow, TracksModel
+from podracer.ui import LibraryView, MainWindow, MetadataDialog, TracksModel
+
+
+def _synthetic_db_with_track() -> bytes:
+    """A real iTunesDB with one tagged track (no gitignored fixture)."""
+    from podracer_db import write_db
+    from podracer_db.model import Library, Playlist, Track
+
+    track = Track(
+        title="Orig Title", artist="Orig Artist",
+        album="Orig Album", genre="Orig Genre",
+        ipod_path=":iPod_Control:Music:F00:AB12.mp3",
+    )
+    lib = Library(tracks=[track])
+    lib.playlists = [
+        Playlist(name="Hyperpink", ptype=1, id=0x1234, members=[track])
+    ]
+    return write_db(lib, firewire_guid="0011223344556677")
 
 
 class _FakeSession:
@@ -208,6 +225,85 @@ class QuitGuardTests(_QtCase):
             self.assertTrue((ipod_dir / "iPod_Control/iTunes/iTunesDB").is_file())
             win.session.close()
             win.close()
+
+
+class MetadataEditTests(_QtCase):
+    """Tag editing: dialog prefill + dialog-free apply path."""
+
+    def _make_window_with_session(self):
+        from podracer import device
+        from podracer.sync import SyncSession
+
+        tmp = tempfile.TemporaryDirectory()
+        ipod_dir = Path(tmp.name) / "HYPERPINK"
+        (ipod_dir / "iPod_Control" / "iTunes").mkdir(parents=True)
+        (ipod_dir / "iPod_Control" / "Music").mkdir(parents=True)
+        (ipod_dir / "iPod_Control" / "iTunes" / "iTunesDB").write_bytes(
+            _synthetic_db_with_track()
+        )
+        ipod = device.IPod(
+            mountpoint=ipod_dir, label="HYPERPINK", block_device="sdb1",
+            guid="0011223344556677", serial="AB12CD34EF56",
+            family_id=12, db_version=3,
+        )
+        win = MainWindow()
+        win.session = SyncSession(ipod, sidecar=Path(tmp.name) / "lib.sqlite")
+        win.tracks_model.set_session(win.session)
+        return win, tmp
+
+    def test_dialog_prefills_track_fields(self):
+        win, tmp = self._make_window_with_session()
+        try:
+            track = win.session.tracks[0]
+            dialog = MetadataDialog(track, win)
+            self.assertEqual(dialog.values(), {
+                "title": "Orig Title", "artist": "Orig Artist",
+                "album": "Orig Album", "genre": "Orig Genre",
+            })
+            dialog._edits["Title"].setText("New")
+            self.assertEqual(dialog.values()["title"], "New")
+        finally:
+            win._dirty = False  # closeEvent would open the quit-guard modal
+            win.session.close()
+            win.close()
+            tmp.cleanup()
+
+    def test_apply_metadata_edits_track_and_marks_dirty(self):
+        win, tmp = self._make_window_with_session()
+        try:
+            win._apply_metadata(0, {
+                "title": "New Title", "artist": "New Artist",
+                "album": "New Album", "genre": "New Genre",
+            })
+            track = win.session.tracks[0]
+            self.assertEqual(track.title, "New Title")
+            self.assertEqual(track.artist, "New Artist")
+            self.assertEqual(track.album, "New Album")
+            self.assertEqual(track.genre, "New Genre")
+            self.assertTrue(win._dirty)
+            # The model cell reflects the edit (dataChanged fired).
+            self.assertEqual(
+                win.tracks_model.data(win.tracks_model.index(0, 0)),
+                "New Title",
+            )
+        finally:
+            win._dirty = False  # closeEvent would open the quit-guard modal
+            win.session.close()
+            win.close()
+            tmp.cleanup()
+
+    def test_apply_metadata_noop_stays_clean(self):
+        win, tmp = self._make_window_with_session()
+        try:
+            win._apply_metadata(0, {
+                "title": "Orig Title", "artist": "Orig Artist",
+                "album": "Orig Album", "genre": "Orig Genre",
+            })
+            self.assertFalse(win._dirty)
+        finally:
+            win.session.close()
+            win.close()
+            tmp.cleanup()
 
 
 class MusicHomeTests(_QtCase):

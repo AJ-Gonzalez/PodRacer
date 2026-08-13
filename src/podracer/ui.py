@@ -108,6 +108,13 @@ class TracksModel(QAbstractTableModel):
             return None
         return self.session.tracks[row]
 
+    def track_changed(self, row: int) -> None:
+        """Repaint one row after a metadata edit (keeps selection/scroll)."""
+        if 0 <= row < self.rowCount():
+            top = self.index(row, 0)
+            bottom = self.index(row, self.columnCount() - 1)
+            self.dataChanged.emit(top, bottom, [Qt.ItemDataRole.DisplayRole])
+
 
 class LibraryView(QTableView):
     """Library table with drop and Delete wiring.
@@ -143,6 +150,44 @@ class LibraryView(QTableView):
             self.deleteRequested.emit()
             return
         super().keyPressEvent(event)
+
+
+class MetadataDialog(QDialog):
+    """Edit one track's title/artist/album/genre.
+
+    Thin widget: pre-fills from the track, returns the four strings via
+    values(). The apply decision lives in MainWindow._apply_metadata so
+    tests never need a modal dialog.
+    """
+
+    FIELDS = ("Title", "Artist", "Album", "Genre")
+
+    def __init__(self, track: Track, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(f"Edit metadata — {track.display_title}")
+        self.setMinimumWidth(360)
+        form = QVBoxLayout(self)
+        self._edits: dict[str, QLineEdit] = {}
+        for field in self.FIELDS:
+            label = QLabel(field, self)
+            edit = QLineEdit(getattr(track, field.lower()) or "", self)
+            self._edits[field] = edit
+            form.addWidget(label)
+            form.addWidget(edit)
+        buttons = QHBoxLayout()
+        cancel = QPushButton("Cancel", self)
+        cancel.clicked.connect(self.reject)
+        save = QPushButton("Save", self)
+        save.setDefault(True)
+        save.clicked.connect(self.accept)
+        buttons.addStretch(1)
+        buttons.addWidget(cancel)
+        buttons.addWidget(save)
+        form.addLayout(buttons)
+        # Enter in any field saves; Esc cancels (QDialog default).
+
+    def values(self) -> dict:
+        return {field.lower(): edit.text() for field, edit in self._edits.items()}
 
 
 class AddWorker(QThread):
@@ -321,6 +366,11 @@ class MainWindow(QMainWindow):
         self.lib_view.setDropIndicatorShown(True)
         self.lib_view.filesDropped.connect(self._files_dropped)
         self.lib_view.deleteRequested.connect(self._remove_selected)
+        # Double-click opens the metadata editor; the context menu and
+        # tooltip make the affordance discoverable (product tenet).
+        self.lib_view.doubleClicked.connect(
+            lambda index: self._edit_track(index.row())
+        )
         # Discoverability: the Delete key alone is invisible. Right-click
         # opens a context menu; a status-bar Remove button enables with
         # the selection. Both say what they do (product tenet).
@@ -332,6 +382,7 @@ class MainWindow(QMainWindow):
         )
         self.lib_view.setToolTip(
             "Drag songs here to add them to the iPod.\n"
+            "Double-click a song to edit its title, artist, album, or genre.\n"
             "Select songs, then press Delete or right-click to remove."
         )
         self.lib_view.selectionModel().selectionChanged.connect(
@@ -802,10 +853,49 @@ class MainWindow(QMainWindow):
                 self.lib_view.clearSelection()
                 self.lib_view.selectRow(row)
         menu = QMenu(self)
+        edit = menu.addAction("Edit metadata…")
+        edit.setToolTip("Change this song's title, artist, album, or genre.")
+        edit.setEnabled(
+            len(self.lib_view.selectionModel().selectedRows()) == 1
+        )
+        edit.triggered.connect(self._edit_selected)
         remove = menu.addAction("Remove from iPod")
         remove.setEnabled(bool(self.lib_view.selectionModel().selectedRows()))
         remove.triggered.connect(self._remove_selected)
         menu.exec(self.lib_view.viewport().mapToGlobal(pos))
+
+    # -- metadata editing -------------------------------------------------
+
+    def _edit_selected(self) -> None:
+        """Open the metadata editor for the single selected track."""
+        rows = self.lib_view.selectionModel().selectedRows()
+        if len(rows) == 1:
+            self._edit_track(rows[0].row())
+
+    def _edit_track(self, row: int) -> None:
+        """Open the editor for one track; apply on Save (no-op on Cancel)."""
+        track = self.tracks_model.track_at(row)
+        if track is None or self.session is None or self._transfer_running():
+            return
+        dialog = MetadataDialog(track, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self._apply_metadata(row, dialog.values())
+
+    def _apply_metadata(self, row: int, values: dict) -> None:
+        """Dialog-free apply of edited tag values to one track.
+
+        Lives outside _edit_track so tests never open a modal dialog.
+        """
+        track = self.tracks_model.track_at(row)
+        if track is None or self.session is None:
+            return
+        if self.session.set_metadata(track, **values):
+            self._dirty = True
+            self.tracks_model.track_changed(row)
+            self._status(
+                f"Updated metadata for '{track.display_title}' — "
+                "Sync to write it to the iPod."
+            )
 
     # -- eject ------------------------------------------------------------
 

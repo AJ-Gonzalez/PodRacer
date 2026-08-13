@@ -75,6 +75,41 @@ class SyncSession:
         if mpl is not None and track in mpl.members:
             mpl.members.remove(track)
 
+    def set_metadata(
+        self,
+        track: Track,
+        *,
+        title: str | None = None,
+        artist: str | None = None,
+        album: str | None = None,
+        genre: str | None = None,
+    ) -> bool:
+        """Edit a track's tags in library state.
+
+        Keyword arguments mirror the four editable tag fields; None
+        leaves a field untouched, "" clears it (the device then falls
+        back to the file name for the title). Edits reach the device
+        DB only on sync(), like adds and deletes. Returns True when at
+        least one field changed.
+        """
+        changed = False
+        for field, value in (
+            ("title", title),
+            ("artist", artist),
+            ("album", album),
+            ("genre", genre),
+        ):
+            if value is None:
+                continue
+            # Empty/whitespace-only input clears the tag; normalized to
+            # None so memory matches a parsed DB (writer omits falsy).
+            value = value.strip() or None
+            if getattr(track, field) == value:
+                continue
+            setattr(track, field, value)
+            changed = True
+        return changed
+
     def sync(self) -> None:
         """Write the library to the device now; keep it mounted.
 

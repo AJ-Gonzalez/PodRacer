@@ -87,6 +87,54 @@ class SyncSessionTests(unittest.TestCase):
             self.assertEqual(session.device_name, "HYPERPINK")
             session.close()
 
+    def test_set_metadata_edits_tags(self):
+        track = self.session.tracks[0]
+        changed = self.session.set_metadata(
+            track, title="Renamed", artist="New Artist",
+            album="New Album", genre="Shoegaze",
+        )
+        self.assertTrue(changed)
+        self.assertEqual(track.title, "Renamed")
+        self.assertEqual(track.artist, "New Artist")
+        self.assertEqual(track.album, "New Album")
+        self.assertEqual(track.genre, "Shoegaze")
+
+    def test_set_metadata_leaves_untouched_fields(self):
+        track = self.session.tracks[0]
+        original = track.artist
+        changed = self.session.set_metadata(track, title="Only Title")
+        self.assertTrue(changed)
+        self.assertEqual(track.title, "Only Title")
+        self.assertEqual(track.artist, original)
+
+    def test_set_metadata_noop_returns_false(self):
+        track = self.session.tracks[0]
+        changed = self.session.set_metadata(
+            track, title=track.title, artist=track.artist,
+        )
+        self.assertFalse(changed)
+
+    def test_set_metadata_clear_and_whitespace(self):
+        track = self.session.tracks[0]
+        self.assertTrue(self.session.set_metadata(track, genre=""))
+        self.assertIsNone(track.genre)
+        self.assertTrue(self.session.set_metadata(track, album="   "))
+        self.assertIsNone(track.album)
+
+    def test_set_metadata_persists_on_sync(self):
+        track = self.session.tracks[0]
+        self.session.set_metadata(
+            track, title="Edited Title", artist="Edited Artist",
+            album="Edited Album", genre="Edited Genre",
+        )
+        self.session.sync()
+        lib = parse_db(self.ipod.db_path.read_bytes())
+        edited = lib.master_playlist().members[0]
+        self.assertEqual(edited.title, "Edited Title")
+        self.assertEqual(edited.artist, "Edited Artist")
+        self.assertEqual(edited.album, "Edited Album")
+        self.assertEqual(edited.genre, "Edited Genre")
+
     def test_add_appends_to_mpl_and_device(self):
         src = Path(self.tmp.name) / "new.mp3"
         _make_mp3(src, title="New Song")
