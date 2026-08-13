@@ -30,6 +30,10 @@ add-extensions:
 modules:
   - name: podracer
     buildsystem: simple
+    # pip needs to fetch PySide6; flatpak-builder's build sandbox has
+    # network off unless the module asks for it.
+    build-options:
+      network: true
     build-commands:
       - pip3 install --prefix=/app --no-cache-dir PySide6
       - pip3 install --prefix=/app --no-deps ./packages/podracer_db
