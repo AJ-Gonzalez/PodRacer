@@ -154,6 +154,17 @@ class LeftPaneTests(_QtCase):
         self.assertTrue(header.stretchLastSection())
         win.close()
 
+    def test_left_pane_multi_select_enabled(self):
+        # The default selection mode is SingleSelection, which silently
+        # disables Ctrl+click; the left pane must allow multi-select so
+        # several folders can be dragged to the iPod at once.
+        win = MainWindow()
+        self.assertEqual(
+            win.fs_view.selectionMode(),
+            QAbstractItemView.SelectionMode.ExtendedSelection,
+        )
+        win.close()
+
 
 class StatusBarTests(_QtCase):
     def test_status_uses_label_not_showmessage(self):

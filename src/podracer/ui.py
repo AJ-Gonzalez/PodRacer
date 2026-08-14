@@ -371,6 +371,11 @@ class MainWindow(QMainWindow):
         )
         self.fs_view.setDragEnabled(True)
         self.fs_view.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
+        # Multi-select (Ctrl+click / Shift+click): the default is
+        # SingleSelection, which silently disables it.
+        self.fs_view.setSelectionMode(
+            QAbstractItemView.SelectionMode.ExtendedSelection
+        )
         self.fs_view.setHeaderHidden(False)
         # All columns manually resizable (no Stretch lock); the date
         # column absorbs leftover space instead.

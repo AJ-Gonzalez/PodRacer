@@ -735,6 +735,93 @@ def sakura_light() -> Theme:
     )
 
 
+def black_velvet() -> Theme:
+    """Black Velvet: dark fantasy romance, near-black with plum accents.
+
+    Palette as given (Dark Fantasy Romance). Near-black base and
+    maroon sweep, plum accent with white text (10.4:1); the bone-cream
+    panels give the text a warm, high-contrast surface (13.2:1).
+    """
+    return Theme(
+        name="Black Velvet",
+        colors={
+            "bone": "#e7e1d4",
+            "ash": "#959090",
+            "plum": "#64285d",
+            "wine": "#610536",
+            "velvet": "#1e1c1c",
+        },
+        window_gradient=("#1e1c1c", "#610536"),
+        accent="#64285d",               # plum: white text clears AA
+        accent2="#610536",              # wine: focus/borders
+        panel_bg="#1e1c1c",             # velvet
+        panel_text="#e7e1d4",           # bone
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.45)",
+        status_text="#e7e1d4",
+        header_gradient=("#64285d", "#1e1c1c"),
+        header_text="#e7e1d4",
+    )
+
+
+def atom_blue() -> Theme:
+    """Atom Blue: Atom One Dark, the editor's blue accent.
+
+    Palette as given (Atom One Dark - Part 1). Dark slate base and
+    gutter sweep; the bright blue accent needs dark navy text (white
+    fails AA at ~3.3); the syntax-grey foreground carries the panels.
+    """
+    return Theme(
+        name="Atom Blue",
+        colors={
+            "syntax-fg": "#abb2bf",
+            "syntax-bg": "#282c34",
+            "gutter": "#636d83",
+            "guide": "#f2f4f5",
+            "accent-blue": "#528bff",
+        },
+        window_gradient=("#282c34", "#636d83"),
+        accent="#528bff",               # accent blue: dark navy text
+        accent2="#636d83",              # gutter: focus/borders
+        panel_bg="#282c34",             # syntax-bg
+        panel_text="#abb2bf",           # syntax-fg
+        text_on_accent="#0b1a38",       # derived dark navy
+        status_bg="rgba(11, 26, 56, 0.45)",
+        status_text="#abb2bf",
+        header_gradient=("#636d83", "#282c34"),
+        header_text="#f2f4f5",          # guide: clears the gutter stop
+    )
+
+
+def atom_lilac() -> Theme:
+    """Atom Lilac: Atom One Dark with the lilac syntax accent.
+
+    Palette as given (Atom One Dark 2). Same slate base as Atom Blue,
+    but the accent is the editor's lilac, which needs deep violet-black
+    text (white fails AA at ~3.0).
+    """
+    return Theme(
+        name="Atom Lilac",
+        colors={
+            "lilac": "#c678dd",
+            "syntax-fg": "#abb2bf",
+            "comment": "#5c6370",
+            "gutter-dark": "#32363e",
+            "syntax-bg": "#282c34",
+        },
+        window_gradient=("#282c34", "#32363e"),
+        accent="#c678dd",               # lilac: deep violet text
+        accent2="#5c6370",              # comment grey: focus/borders
+        panel_bg="#282c34",             # syntax-bg
+        panel_text="#abb2bf",           # syntax-fg
+        text_on_accent="#1a0f24",       # derived deep violet
+        status_bg="rgba(26, 15, 36, 0.45)",
+        status_text="#abb2bf",
+        header_gradient=("#32363e", "#282c34"),
+        header_text="#abb2bf",
+    )
+
+
 THEMES: list[Theme] = [
     magenta_daydream(),
     grey_moonlight(),
@@ -754,6 +841,9 @@ THEMES: list[Theme] = [
     stoner_shore(),
     carmillas_snack(),
     sakura_light(),
+    black_velvet(),
+    atom_blue(),
+    atom_lilac(),
 ]
 
 
