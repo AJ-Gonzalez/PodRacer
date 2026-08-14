@@ -46,7 +46,7 @@ The biggest help: a real iTunesDB dump from a device we cannot verify ourselves.
 
 then open a PR adding the file under `fixtures/public/<model>/`, or send it along. Heads up: the DB lists your whole music library (titles, artists, play counts), so only share one you are comfortable with.
 
-I'd love to buy some iPods to test on if possible. I have a [Buy Me a Cofee](buymeacoffee.com/BuildWithAJ)
+I'd love to buy some iPods to test on if possible. I have a [Buy Me a Cofee](https://buymeacoffee.com/buildwithaj)
 
 ## Themes
 
