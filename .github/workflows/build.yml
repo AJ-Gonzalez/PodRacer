@@ -90,6 +90,15 @@ jobs:
           name: ${{ matrix.binary }}
           path: ${{ matrix.binary }}
 
+      - name: Build deb package
+        run: bash scripts/build_deb.sh
+
+      - name: Upload deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.binary }}-deb
+          path: dist/podracer_*.deb
+
   release:
     runs-on: ubuntu-latest
     # One release for all three artifacts; a per-matrix-cell Release
@@ -99,6 +108,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: podracer
@@ -111,11 +121,28 @@ jobs:
         with:
           name: podracer-flatpak
           path: .
+      - uses: actions/download-artifact@v4
+        with:
+          name: podracer-deb
+          path: .
+      - uses: actions/download-artifact@v4
+        with:
+          name: podracer-arm64-deb
+          path: .
+      - name: Compute release title from the changelog
+        id: title
+        run: |
+          HEADING="$(grep '^## \[' CHANGELOG.md | grep -v '^## \[Unreleased\]' | head -1)"
+          VERSION="$(echo "$HEADING" | sed -n 's/^## \[\([0-9.]*\)\].*/\1/p')"
+          NICKNAME="$(echo "$HEADING" | sed -n 's/.*"\(.*\)"$/\1/p')"
+          TITLE="PodRacer v$VERSION${NICKNAME:+ \"$NICKNAME\"}"
+          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
+          name: ${{ steps.title.outputs.title }}
           files: |
             podracer
             podracer-arm64
             podracer.flatpak
-          name: PodRacer ${{ github.ref_name }}
+            podracer_*.deb
