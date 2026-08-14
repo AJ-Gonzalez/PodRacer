@@ -822,6 +822,182 @@ def atom_lilac() -> Theme:
     )
 
 
+def coffee_shop() -> Theme:
+    """Coffee Shop: dark Americano roast, warm espresso sweep.
+
+    Palette as given (Dark Americano). Every shade is a coffee brown,
+    so light text clears AA throughout; the sweep runs the espresso
+    down to the mocha, and the cream panels keep it readable.
+    """
+    return Theme(
+        name="Coffee Shop",
+        colors={
+            "espresso": "#382c28",
+            "mocha": "#605653",
+            "latte": "#88807e",
+            "foam": "#afaba9",
+            "cream": "#d7d5d4",
+        },
+        window_gradient=("#382c28", "#605653"),
+        accent="#605653",               # mocha: white text clears AA
+        accent2="#88807e",              # latte: focus/borders
+        panel_bg="#382c28",             # espresso
+        panel_text="#d7d5d4",           # cream
+        text_on_accent="#ffffff",
+        status_bg="rgba(24, 18, 15, 0.45)",
+        status_text="#d7d5d4",
+        header_gradient=("#605653", "#382c28"),
+        header_text="#d7d5d4",
+    )
+
+
+def water_tribe() -> Theme:
+    """Water Tribe: ocean-blue light, pale water sweep.
+
+    Palette as given (oceancity). A light theme: near-white water
+    panels under a pale sweep, deep ocean-blue accent and text. The
+    lightest blues can't carry white text, so body text runs deep
+    blue (clears AA on every stop).
+    """
+    return Theme(
+        name="Water Tribe",
+        colors={
+            "deep-ocean": "#2a4d88",
+            "mist": "#d9d9d8",
+            "fog": "#b1bbc8",
+            "wave": "#7c94b8",
+            "foam-white": "#f2f2fa",
+        },
+        window_gradient=("#f2f2fa", "#b1bbc8"),
+        accent="#2a4d88",               # deep ocean: white text clears AA
+        accent2="#7c94b8",              # wave: focus/borders
+        panel_bg="#f2f2fa",             # foam white
+        panel_text="#2a4d88",           # deep ocean
+        text_on_accent="#ffffff",
+        status_bg="rgba(42, 77, 136, 0.18)",
+        status_text="#2a4d88",
+        header_gradient=("#d9d9d8", "#b1bbc8"),
+        header_text="#2a4d88",
+    )
+
+
+def last_agni_kai() -> Theme:
+    """Last Agni Kai: flame to blue flame, ember slate sweep.
+
+    Palette as given (Flame to Blue Flame). The orange is the fighting
+    fire, the deep blue the comet-lit sky; the sweep runs ember-slate
+    down to the blue, and the cool slate panels keep the flame accent
+    loud.
+    """
+    return Theme(
+        name="Last Agni Kai",
+        colors={
+            "flame": "#e25822",
+            "ember": "#b6624d",
+            "ash": "#8a6665",
+            "slate": "#596478",
+            "blue-flame": "#005e88",
+        },
+        window_gradient=("#8a6665", "#005e88"),
+        accent="#e25822",               # flame: dark text clears AA
+        accent2="#005e88",              # blue flame: focus/borders
+        panel_bg="#596478",             # slate
+        panel_text="#f0e8e4",           # derived warm white
+        text_on_accent="#2b0e04",       # derived near-black ember
+        status_bg="rgba(30, 20, 18, 0.45)",
+        status_text="#ffffff",
+        header_gradient=("#596478", "#005e88"),
+        header_text="#ffffff",
+    )
+
+
+def fire_nation() -> Theme:
+    """Fire Nation: blood-red shades over near-black.
+
+    Palette as given (Fire Nation 1). The gold is the imperial trim,
+    the reds the banners; the sweep runs crimson down to the charcoal
+    so the flame accent stays hot.
+    """
+    return Theme(
+        name="Fire Nation",
+        colors={
+            "imperial-gold": "#a37404",
+            "amber": "#c78826",
+            "crimson": "#b20c0c",
+            "dark-red": "#781111",
+            "charcoal": "#2b2424",
+        },
+        window_gradient=("#781111", "#2b2424"),
+        accent="#b20c0c",               # crimson: white text clears AA
+        accent2="#c78826",              # amber: focus/borders
+        panel_bg="#2b2424",             # charcoal
+        panel_text="#f5e6d8",           # derived warm parchment
+        text_on_accent="#ffffff",
+        status_bg="rgba(20, 8, 8, 0.5)",
+        status_text="#f5e6d8",
+        header_gradient=("#781111", "#2b2424"),
+        header_text="#f5e6d8",
+    )
+
+
+def earth_kingdom() -> Theme:
+    """Earth Kingdom: deep earthen greens, forest sweep.
+
+    Palette as given (Earth Kingdom 1). The pale sage and olive are
+    the sunlit leaves, the deep greens the soil; light text clears AA
+    on every dark stop.
+    """
+    return Theme(
+        name="Earth Kingdom",
+        colors={
+            "sage": "#80987c",
+            "olive": "#b4ad64",
+            "fern": "#7b944f",
+            "forest": "#145425",
+            "soil": "#0c3808",
+        },
+        window_gradient=("#145425", "#0c3808"),
+        accent="#7b944f",               # fern: dark text clears AA
+        accent2="#b4ad64",              # olive: focus/borders
+        panel_bg="#0c3808",             # soil
+        panel_text="#e2ecd9",           # derived pale sage
+        text_on_accent="#0d1f08",       # derived near-black forest
+        status_bg="rgba(6, 20, 4, 0.5)",
+        status_text="#e2ecd9",
+        header_gradient=("#145425", "#0c3808"),
+        header_text="#e2ecd9",
+    )
+
+
+def air_nomad() -> Theme:
+    """Air Nomad: spring-sky blue, light airy sweep.
+
+    Palette as given (Spring Sky Blue). A light theme: pale sky
+    panels under a soft-blue sweep, deep-sky accent with dark text.
+    The blues are all light, so body text runs a derived deep navy.
+    """
+    return Theme(
+        name="Air Nomad",
+        colors={
+            "sky-pale": "#b3edfe",
+            "sky-soft": "#9cd0f9",
+            "sky": "#aad8ff",
+            "sky-deep": "#93c6ef",
+            "sky-ink": "#65a7de",
+        },
+        window_gradient=("#b3edfe", "#93c6ef"),
+        accent="#65a7de",               # sky ink: dark navy text clears AA
+        accent2="#9cd0f9",              # sky soft: focus/borders
+        panel_bg="#b3edfe",             # sky pale
+        panel_text="#1a3a5c",           # derived deep navy
+        text_on_accent="#0d2b45",       # derived darkest navy
+        status_bg="rgba(10, 30, 50, 0.15)",
+        status_text="#1a3a5c",
+        header_gradient=("#aad8ff", "#93c6ef"),
+        header_text="#1a3a5c",
+    )
+
+
 THEMES: list[Theme] = [
     magenta_daydream(),
     grey_moonlight(),
@@ -844,6 +1020,12 @@ THEMES: list[Theme] = [
     black_velvet(),
     atom_blue(),
     atom_lilac(),
+    coffee_shop(),
+    water_tribe(),
+    last_agni_kai(),
+    fire_nation(),
+    earth_kingdom(),
+    air_nomad(),
 ]
 
 
