@@ -84,20 +84,33 @@ def scan_orphans(
         if progress:
             progress(i + 1, len(files))
 
+    # Actual on-disk files, indexed case-insensitively. FAT is a
+    # case-insensitive filesystem: PodRacer records the folder it
+    # generated ("F04") while the file may have landed in a
+    # pre-existing lowercase folder ("f04"), so "does a library track
+    # reference this file" must not depend on Path equality (which is
+    # case-sensitive on Linux).
+    on_disk = {
+        str(p.relative_to(music_dir)).casefold(): p for p in files
+    }
+
     # Content of every library track, with a label for the report.
     content_label: dict[str, str] = {}
     referenced: set[Path] = set()
     for track in lib.tracks:
         src = _track_path(track, music_dir)
-        if src is None or not src.is_file():
+        if src is None:
             continue
-        referenced.add(src)
-        digest = scan.hashes.get(src)
+        actual = on_disk.get(str(src.relative_to(music_dir)).casefold())
+        if actual is None:
+            continue  # DB entry whose file is gone — tolerated, not an orphan
+        referenced.add(actual)
+        digest = scan.hashes.get(actual)
         if digest is None:
-            digest = _hash_file(src)
-            scan.hashes[src] = digest
+            digest = _hash_file(actual)
+            scan.hashes[actual] = digest
         scan.library_hashes.add(digest)
-        content_label.setdefault(digest, track.title or src.stem)
+        content_label.setdefault(digest, track.title or actual.stem)
 
     for path in files:
         if path in referenced:
@@ -110,6 +123,27 @@ def scan_orphans(
         else:
             scan.unique.append(item)
     return scan
+
+
+def stale_entries(lib: Library, music_dir: Path) -> list[Track]:
+    """Library tracks whose device file no longer exists on disk.
+
+    The inverse of the orphan scan: the DB references a file that is
+    gone (deleted out from under the DB, or never written), so the
+    track lists on the device but can never play. Resolution is
+    case-insensitive — a file that exists under a differently-cased
+    folder is not stale.
+    """
+    files = [p for p in music_dir.rglob("*") if p.is_file()]
+    on_disk = {str(p.relative_to(music_dir)).casefold() for p in files}
+    stale = []
+    for track in lib.tracks:
+        src = _track_path(track, music_dir)
+        if src is None:
+            continue
+        if str(src.relative_to(music_dir)).casefold() not in on_disk:
+            stale.append(track)
+    return stale
 
 
 def delete_orphans(files: list[OrphanFile]) -> tuple[int, int, list[str]]:

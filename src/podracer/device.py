@@ -144,7 +144,7 @@ def _parse_mountinfo(text: str, target: str) -> str | None:
     return None
 
 
-def _fill_identity(ipod: IPod) -> None:
+def fill_identity(ipod: IPod) -> None:
     """Attach sysinfo identity (GUID, serial, family id) from the device."""
     if ipod.serial is not None:
         return
@@ -173,12 +173,12 @@ def current_ipod() -> IPod | None:
         for ipod in mounted_ipods():
             if ipod.label and ipod.label == label:
                 ipod.block_device = device
-                _fill_identity(ipod)
+                fill_identity(ipod)
                 return ipod
     # Mounted but udisks2 did not report a mount (rare): fall back to a scan.
     for ipod in mounted_ipods():
         ipod.block_device = _block_device_for(ipod.mountpoint)
-        _fill_identity(ipod)
+        fill_identity(ipod)
         return ipod
     return None
 
@@ -199,7 +199,7 @@ def auto_mount() -> IPod | None:
     for ipod in mounted_ipods():
         if ipod.label and ipod.label in labels:
             ipod.block_device = labels[ipod.label]
-            _fill_identity(ipod)
+            fill_identity(ipod)
             return ipod
     return mount_ipod()
 
@@ -217,7 +217,7 @@ def mount_ipod() -> IPod:
              label=label),
     )
     ipod.block_device = device
-    _fill_identity(ipod)
+    fill_identity(ipod)
     return ipod
 
 
