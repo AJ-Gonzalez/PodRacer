@@ -46,6 +46,10 @@ The biggest help: a real iTunesDB dump from a device we cannot verify ourselves.
 
 then open a PR adding the file under `fixtures/public/<model>/`, or send it along. Heads up: the DB lists your whole music library (titles, artists, play counts), so only share one you are comfortable with.
 
+I'd love to buy some iPods to test on if possible. 
+
+<script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="BuildWithAJ" data-color="#FFDD00" data-emoji=""  data-font="Cookie" data-text="Buy me iPods" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff" ></script>
+
 ## Themes
 
 <img src="mockups/contact-sheet.png" width="800" alt="Six PodRacer themes: Grey Moonlight, Frutiger Aero, Aqua, Dark Aqua, Minty Forest, Lilac Love">
