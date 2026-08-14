@@ -16,7 +16,8 @@ class FontTests(unittest.TestCase):
     def test_fonts_register(self):
         register_fonts()
         families = set(QFontDatabase.families())
-        for family in ("Comic Neue", "OpenDyslexic3", "IBM Plex Mono"):
+        for family in ("Comic Neue", "OpenDyslexic3", "IBM Plex Mono",
+                       "Macondo", "Amarante"):
             self.assertIn(family, families, family)
 
     def test_apply_font_sets_family_and_size(self):

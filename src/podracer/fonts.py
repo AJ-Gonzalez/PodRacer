@@ -1,9 +1,10 @@
 """Bundled fonts: registration + application-wide font control.
 
 Comic Neue and OpenDyslexic are the dyslexia-friendly options
-(AGENTS.md), IBM Plex Mono is the monospace option. All are SIL OFL
-and shipped inside the app bundle; Qt loads them from disk or from
-the PyInstaller onefile temp dir.
+(AGENTS.md), IBM Plex Mono is the monospace option, Macondo and
+Amarante are the display/art options. All are SIL OFL and shipped
+inside the app bundle; Qt loads them from disk or from the PyInstaller
+onefile temp dir.
 
 `apply_font()` re-scales the whole UI live: Qt propagates the
 application font to every widget, and layouts recompute from font
@@ -17,16 +18,21 @@ from pathlib import Path
 
 from PySide6.QtGui import QFont, QFontDatabase
 
+# (regular, bold) — bold may be None for single-weight families.
 FONTS = {
     "OpenDyslexic3": ("OpenDyslexic3Regular.ttf", "OpenDyslexic3Bold.ttf"),
     "Comic Neue": ("ComicNeue-Regular.ttf", "ComicNeue-Bold.ttf"),
     "IBM Plex Mono": ("IBMPlexMono-Regular.ttf", "IBMPlexMono-Bold.ttf"),
+    "Macondo": ("Macondo-Regular.ttf", None),
+    "Amarante": ("Amarante-Regular.ttf", None),
 }
 
 # Order shown in the switcher; "" = the platform's system font.
 FONT_OPTIONS = [("System Font", ""), ("Comic Neue", "Comic Neue"),
                 ("OpenDyslexic3", "OpenDyslexic3"),
-                ("IBM Plex Mono", "IBM Plex Mono")]
+                ("IBM Plex Mono", "IBM Plex Mono"),
+                ("Macondo", "Macondo"),
+                ("Amarante", "Amarante")]
 
 MIN_SIZE = 9
 MAX_SIZE = 24
@@ -42,6 +48,8 @@ def register_fonts() -> None:
     """Load every bundled font weight once; safe to call repeatedly."""
     for _family, (regular, bold) in FONTS.items():
         for name in (regular, bold):
+            if name is None:
+                continue
             path = _fonts_dir() / name
             if path.is_file():
                 QFontDatabase.addApplicationFont(str(path))
