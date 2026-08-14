@@ -5,3 +5,5 @@ Newest first. The release script moves the version heading out of
 heading, so an optional nickname in quotes lands in the title.
 
 ## [Unreleased]
+
+## [1.1.0] - 2026-08-13 "Headlong"
