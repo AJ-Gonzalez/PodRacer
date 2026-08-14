@@ -16,6 +16,7 @@ dependencies = [
     "podracer_db>=1.0.0",
 ]
 license-files = ["LICENSE"]
+readme = "README.md"
 
 [project.scripts]
 podracer = "podracer.main:main"
