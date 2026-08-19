@@ -59,6 +59,27 @@ def contrast_ratio(a: str, b: str) -> float:
     return (hi + 0.05) / (lo + 0.05)
 
 
+_PRESS_FACTORS = (0.55, 0.62, 0.70, 0.78, 0.86, 0.94)
+
+
+def pressed_color(accent: str, text_on_accent: str) -> str:
+    """Darkest shade of `accent` that still hits WCAG AA against its text.
+
+    `darken(accent, 0.55)` assumes light text on a dark accent. Light
+    accents carry dark text (that's how they pass AA), and darkening a
+    light accent into mid-tones flips the luminance and drops contrast
+    to ~2:1 -- the invisible-text-on-selection bug (menu checked state,
+    pressed buttons). Walk from the deepest darken up and return the
+    darkest shade that still reads; if none does, fall back to the
+    accent itself (guaranteed to pass, since the base accent is tested).
+    """
+    for factor in _PRESS_FACTORS:
+        cand = darken(accent, factor)
+        if contrast_ratio(cand, text_on_accent) >= 4.5:
+            return cand
+    return accent
+
+
 @dataclass(frozen=True)
 class Theme:
     name: str
@@ -85,8 +106,8 @@ class Theme:
     def qss(self) -> str:
         from_, to_ = self.window_gradient
         h1, h2 = self.header_gradient
-        button_to = self._role(self.button_to, darken(self.accent))
-        pressed = self._role(self.button_pressed, darken(self.accent, 0.55))
+        button_to = resolved_button_to(self)
+        pressed = resolved_pressed(self)
         hover = self._role(self.hover_tint, rgba_of(self.accent, 0.12))
         alternate = self._role(self.alternate_tint, rgba_of(self.accent, 0.08))
         return f"""
@@ -213,6 +234,39 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
         pal.setColor(QPalette.ColorRole.ToolTipBase, QColor(self.panel_bg))
         pal.setColor(QPalette.ColorRole.ToolTipText, QColor(self.panel_text))
         return pal
+
+
+def button_gradient_stop(accent: str, text_on_accent: str) -> str:
+    """The gradient's darker stop: the gentle 0.82 darken when it reads.
+
+    Buttons are accent -> this stop, with text on top; the stop must
+    hold AA against the same text. The 0.82 darken is fine for dark
+    accents (light text); light accents carry dark text, so darkening
+    breaks the bottom half -- fall back to the darkest safe shade.
+    """
+    cand = darken(accent)
+    if contrast_ratio(cand, text_on_accent) >= 4.5:
+        return cand
+    return pressed_color(accent, text_on_accent)
+
+
+def resolved_pressed(theme: Theme) -> str:
+    """The pressed/checked background a theme actually renders with.
+
+    Honors an explicit `button_pressed` override; otherwise the
+    polarity-aware `pressed_color`. Kept public so tests guard the same
+    value the QSS emits (an override must also hold contrast).
+    """
+    return theme.button_pressed or pressed_color(
+        theme.accent, theme.text_on_accent
+    )
+
+
+def resolved_button_to(theme: Theme) -> str:
+    """The gradient's darker stop a theme actually renders with."""
+    return theme.button_to or button_gradient_stop(
+        theme.accent, theme.text_on_accent
+    )
 
 
 def magenta_daydream() -> Theme:
@@ -449,7 +503,7 @@ def analog_sunrise() -> Theme:
         text_on_accent="#2b2118",       # derived warm dark
         status_bg="rgba(0, 0, 0, 0.35)",
         status_text="#e8eaec",          # derived near-white
-        header_gradient=("#fe7743", "#447d9b"),   # the sunrise
+        header_gradient=("#fe7743", "#6997af"),   # the sunrise (2nd stop lightened: dark text must read on the blue)
         header_text="#2b2118",
     )
 
@@ -876,7 +930,7 @@ def water_tribe() -> Theme:
         text_on_accent="#ffffff",
         status_bg="rgba(42, 77, 136, 0.18)",
         status_text="#2a4d88",
-        header_gradient=("#d9d9d8", "#b1bbc8"),
+        header_gradient=("#d9d9d8", "#bac3ce"),   # 2nd stop lightened: ocean text must read on the gray
         header_text="#2a4d88",
     )
 

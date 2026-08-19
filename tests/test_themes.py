@@ -9,6 +9,8 @@ from podracer.themes import (
     Theme,
     apply_theme,
     contrast_ratio,
+    resolved_button_to,
+    resolved_pressed,
     theme_by_name,
 )
 
@@ -38,6 +40,28 @@ class PaletteTests(unittest.TestCase):
                 contrast_ratio(theme.status_text, theme.window_gradient[0]), 4.5,
                 theme.name,
             )
+
+    def test_pressed_and_header_contrast_aa(self):
+        # Derived states the base test misses: the checked/pressed
+        # background (darken of the accent) must still read against
+        # text_on_accent, and header text against both gradient stops.
+        for theme in THEMES:
+            self.assertGreaterEqual(
+                contrast_ratio(resolved_pressed(theme), theme.text_on_accent),
+                4.5,
+                f"{theme.name} pressed/checked",
+            )
+            self.assertGreaterEqual(
+                contrast_ratio(resolved_button_to(theme), theme.text_on_accent),
+                4.5,
+                f"{theme.name} button gradient stop",
+            )
+            for stop in theme.header_gradient:
+                self.assertGreaterEqual(
+                    contrast_ratio(stop, theme.header_text),
+                    4.5,
+                    f"{theme.name} header {stop}",
+                )
 
     def test_theme_registry(self):
         names = [t.name for t in THEMES]
