@@ -1052,6 +1052,83 @@ def air_nomad() -> Theme:
     )
 
 
+def i_know_kung_fu() -> Theme:
+    """I know Kung Fu: green monochrome terminal, Matrix phosphor.
+
+    One hue, no white: phosphor green on black, black on phosphor for
+    selection (the inverted-terminal look). Panel, body, accent,
+    header, and status all ride the same #00ff41; only the border
+    dims to #00b33c.
+    """
+    return Theme(
+        name="I know Kung Fu",
+        colors={"phosphor": "#00ff41"},
+        window_gradient=("#07140c", "#010402"),
+        accent="#00ff41",
+        accent2="#00b33c",
+        panel_bg="#000000",
+        panel_text="#00ff41",
+        text_on_accent="#000000",
+        status_bg="rgba(0, 0, 0, 0.55)",
+        status_text="#00ff41",
+        header_gradient=("#003d1f", "#001a0d"),
+        header_text="#00ff41",
+    )
+
+
+def my_name_is_neo() -> Theme:
+    """My name is Neo: purple monochrome terminal.
+
+    Bright violet phosphor on black (black on violet for selection).
+    Body text runs a lighter lavender so the accent stays bright; the
+    border dims to violet-500.
+    """
+    return Theme(
+        name="My name is Neo",
+        colors={"phosphor-purple": "#c084fc"},
+        window_gradient=("#0d0714", "#030104"),
+        accent="#c084fc",
+        accent2="#8b5cf6",
+        panel_bg="#000000",
+        panel_text="#d8b4fe",
+        text_on_accent="#000000",
+        status_bg="rgba(0, 0, 0, 0.55)",
+        status_text="#c084fc",
+        header_gradient=("#3b0764", "#1a0233"),
+        header_text="#c084fc",
+    )
+
+
+def give_me_the_night() -> Theme:
+    """Give me the night: charcoal -> plum -> magenta night palette.
+
+    Palette as given (#1a1a1d #3b1c32 #6a1e55 #a64d79). Near-black
+    panels carry a derived soft-rose body text (the rose #a64d79 is
+    only 3.4:1 on #1a1a1d, too dim for text); the deep magenta is the
+    accent with white text; the rose, lightened to #b77093, is the
+    border/focus/placeholder color so the placeholder reads.
+    """
+    return Theme(
+        name="Give me the night",
+        colors={
+            "charcoal": "#1a1a1d",
+            "plum": "#3b1c32",
+            "magenta": "#6a1e55",
+            "rose": "#a64d79",
+        },
+        window_gradient=("#1a1a1d", "#3b1c32"),
+        accent="#6a1e55",
+        accent2="#b77093",              # rose lightened: placeholder must read
+        panel_bg="#1a1a1d",
+        panel_text="#d9a8c3",           # derived soft rose
+        text_on_accent="#ffffff",
+        status_bg="rgba(26, 26, 29, 0.55)",
+        status_text="#d9a8c3",
+        header_gradient=("#3b1c32", "#6a1e55"),
+        header_text="#ffffff",
+    )
+
+
 THEMES: list[Theme] = [
     magenta_daydream(),
     grey_moonlight(),
@@ -1080,6 +1157,9 @@ THEMES: list[Theme] = [
     fire_nation(),
     earth_kingdom(),
     air_nomad(),
+    i_know_kung_fu(),
+    my_name_is_neo(),
+    give_me_the_night(),
 ]
 
 
