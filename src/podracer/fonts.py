@@ -37,6 +37,17 @@ FONT_OPTIONS = [("System Font", ""), ("Comic Neue", "Comic Neue"),
 MIN_SIZE = 9
 MAX_SIZE = 24
 
+# Line spacing presets: plain label + multiplier on the font's line
+# height. 1.0 must reproduce today's layout exactly; the checked
+# default. Labels are the accessibility-facing words; the percentage
+# rides to the side.
+LINE_SPACINGS = [
+    ("Normal", 1.0),
+    ("Relaxed", 1.25),
+    ("Roomy", 1.5),
+    ("Spacious", 2.0),
+]
+
 
 def _fonts_dir() -> Path:
     meipass = getattr(sys, "_MEIPASS", None)  # PyInstaller onefile temp dir

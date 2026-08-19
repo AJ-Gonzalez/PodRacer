@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from podracer_db.model import Track
-from podracer.fonts import FONT_OPTIONS, MAX_SIZE, MIN_SIZE
+from podracer.fonts import FONT_OPTIONS, LINE_SPACINGS, MAX_SIZE, MIN_SIZE
 from podracer.themes import THEMES
 from podracer.ui import (
     BulkMetadataDialog,
@@ -465,13 +465,38 @@ class AppearanceMenuTests(_QtCase):
         self._tmp.cleanup()
         super().tearDown()
 
-    def test_appearance_is_one_button_with_three_submenus(self):
+    def test_appearance_is_one_button_with_four_submenus(self):
         win = MainWindow()
         submenus = [a.text() for a in win.appearance_menu.actions() if a.menu()]
-        self.assertEqual(submenus, ["Theme", "Font", "Font size"])
+        self.assertEqual(
+            submenus, ["Theme", "Font", "Font size", "Line spacing"]
+        )
         self.assertEqual(len(win._theme_actions), len(THEMES))
         self.assertEqual(len(win._font_actions), len(FONT_OPTIONS))
         self.assertEqual(len(win._size_actions), MAX_SIZE - MIN_SIZE + 1)
+        self.assertEqual(len(win._line_spacing_actions), len(LINE_SPACINGS))
+        win.close()
+
+    def test_line_spacing_applies_and_checks(self):
+        win = MainWindow()
+        baseline = win.lib_view.verticalHeader().defaultSectionSize()
+        label, factor = LINE_SPACINGS[-1]
+        text = f"{label} ({int(round(factor * 100))}%)"
+        target = next(
+            a for a in win._line_spacing_actions if a.text() == text
+        )
+        target.trigger()
+        self.assertEqual(win._line_spacing, factor)
+        self.assertEqual(
+            float(win.settings.value("font/line_spacing", 1.0, float)),
+            factor,
+        )
+        self.assertGreater(
+            win.lib_view.verticalHeader().defaultSectionSize(), baseline
+        )
+        self.assertEqual(win._fs_delegate.factor, factor)
+        checked = [a for a in win._line_spacing_actions if a.isChecked()]
+        self.assertEqual([a.text() for a in checked], [text])
         win.close()
 
     def test_theme_switch_moves_checkmark(self):

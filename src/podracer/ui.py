@@ -13,16 +13,18 @@ ships a stylesheet hook today.
 
 from __future__ import annotations
 
+import html
 import tempfile
 import time
 from datetime import date
 from pathlib import Path
 
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtGui import QFontMetrics, QKeySequence, QShortcut
 from PySide6.QtCore import (
     QAbstractTableModel,
     QModelIndex,
     QSettings,
+    QSize,
     QSortFilterProxyModel,
     Qt,
     QThread,
@@ -47,13 +49,21 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QSplitter,
+    QStyledItemDelegate,
     QTableView,
     QTreeView,
     QVBoxLayout,
     QWidget,
 )
 from . import device
-from .fonts import FONT_OPTIONS, MAX_SIZE, MIN_SIZE, apply_font, register_fonts
+from .fonts import (
+    FONT_OPTIONS,
+    LINE_SPACINGS,
+    MAX_SIZE,
+    MIN_SIZE,
+    apply_font,
+    register_fonts,
+)
 from .pipeline import ACCEPTED_EXTENSIONS, AddResult, collect_audio
 from .sync import SyncSession
 from .themes import THEMES, apply_theme
@@ -151,6 +161,37 @@ class LibraryView(QTableView):
             self.deleteRequested.emit()
             return
         super().keyPressEvent(event)
+
+
+class SpacedRowDelegate(QStyledItemDelegate):
+    """Scale a view's row height by the line-spacing factor.
+
+    Factor 1.0 returns the stock sizeHint untouched (identity), so the
+    default renders exactly as before. Used on the filesystem tree,
+    which has no verticalHeader to drive row height directly.
+    """
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.factor = 1.0
+
+    def sizeHint(self, option, index):  # noqa: N802
+        hint = super().sizeHint(option, index)
+        if self.factor == 1.0:
+            return hint
+        return QSize(hint.width(), max(hint.height(), int(hint.height() * self.factor)))
+
+
+def _spaced_para(text: str, factor: float) -> str:
+    """Plain text -> one rich-text paragraph with CSS line-height.
+
+    Qt's stylesheets ignore `line-height`, but rich text honors it, so
+    wrapping dialog bodies is the only way to space wrapped lines. The
+    text is HTML-escaped so a track title can never inject markup.
+    """
+    pct = int(round(factor * 100))
+    body = html.escape(text).replace("\n", "<br>")
+    return f'<p style="line-height:{pct}%">{body}</p>'
 
 
 class MetadataDialog(QDialog):
@@ -369,6 +410,10 @@ class MainWindow(QMainWindow):
         self.fs_view.setRootIndex(
             self.fs_proxy.mapFromSource(self.fs_model.index(start))
         )
+        # Row height is driven by the delegate's sizeHint (a QTreeView
+        # has no verticalHeader); the line-spacing factor scales it.
+        self._fs_delegate = SpacedRowDelegate(self.fs_view)
+        self.fs_view.setItemDelegate(self._fs_delegate)
         self.fs_view.setDragEnabled(True)
         self.fs_view.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
         # Multi-select (Ctrl+click / Shift+click): the default is
@@ -530,14 +575,15 @@ class MainWindow(QMainWindow):
         )
         self.appearance_button = QPushButton("Appearance", self)
         self.appearance_button.setToolTip(
-            "The look of PodRacer: theme, font, and text size "
-            "(shortcuts: Ctrl+ / Ctrl−)."
+            "The look of PodRacer: theme, font, text size, and line "
+            "spacing (text-size shortcuts: Ctrl+ / Ctrl−)."
         )
         self.appearance_button.clicked.connect(self._show_appearance_menu)
         self.appearance_menu = QMenu(self)
         self._theme_actions: list = []
         self._font_actions: list = []
         self._size_actions: list = []
+        self._line_spacing_actions: list = []
         self.statusBar().addWidget(self.device_label)
         self.statusBar().addWidget(self.track_count)
         # Status messages go in a real label, never QStatusBar.showMessage:
@@ -576,11 +622,12 @@ class MainWindow(QMainWindow):
     # -- appearance ------------------------------------------------------
 
     def _rebuild_appearance_menu(self) -> None:
-        """Theme, font, and size submenus, checkmark on the current."""
+        """Theme, font, size, and line-spacing submenus, checkmark current."""
         self.appearance_menu.clear()
         self._theme_actions = []
         self._font_actions = []
         self._size_actions = []
+        self._line_spacing_actions = []
 
         theme_menu = self.appearance_menu.addMenu("Theme")
         for theme in THEMES:
@@ -611,6 +658,18 @@ class MainWindow(QMainWindow):
                 lambda _=False, s=size: self._set_font(self._font_family, s)
             )
             self._size_actions.append(action)
+
+        line_menu = self.appearance_menu.addMenu("Line spacing")
+        for label, factor in LINE_SPACINGS:
+            action = line_menu.addAction(
+                f"{label} ({int(round(factor * 100))}%)"
+            )
+            action.setCheckable(True)
+            action.setChecked(factor == self._line_spacing)
+            action.triggered.connect(
+                lambda _=False, f=factor: self._set_line_spacing(f)
+            )
+            self._line_spacing_actions.append(action)
 
     def _font_label(self) -> str:
         return next(
@@ -648,8 +707,36 @@ class MainWindow(QMainWindow):
         apply_font(app, family, self._font_size)
         self.settings.setValue("font/family", family)
         self.settings.setValue("font/size", self._font_size)
+        self._apply_row_heights()
         self._rebuild_appearance_menu()
         self._status(f"Text: {self._font_label()}, {self._font_size} pt")
+
+    def _set_line_spacing(self, factor: float) -> None:
+        self._line_spacing = factor
+        self.settings.setValue("font/line_spacing", factor)
+        self._apply_row_heights()
+        self._rebuild_appearance_menu()
+        label, pct = next(
+            (l, int(round(f * 100))) for l, f in LINE_SPACINGS if f == factor
+        )
+        self._status(f"Line spacing: {label} ({pct}%)")
+
+    def _apply_row_heights(self) -> None:
+        """Re-derive pane row heights from the font and spacing factor.
+
+        Both panes scale from the current font's line height so the
+        setting tracks the user's chosen font size instead of fighting
+        it. The table's rows are pinned by the header default (Qt's 30
+        is already roomier than a 10pt line); the tree's by the
+        delegate sizeHint. Factor 1.0 reproduces the current layout.
+        """
+        app = QApplication.instance()
+        if app is None or self.lib_view is None or self.fs_view is None:
+            return
+        base = max(30, QFontMetrics(app.font()).lineSpacing())
+        row = max(base, int(base * self._line_spacing))
+        self.lib_view.verticalHeader().setDefaultSectionSize(row)
+        self._fs_delegate.factor = self._line_spacing
 
     def _load_settings(self) -> None:
         theme_name = self.settings.value("theme/name", THEMES[0].name, str)
@@ -669,11 +756,15 @@ class MainWindow(QMainWindow):
         else:
             default_size = 10
         size = int(self.settings.value("font/size", default_size, int))
+        self._line_spacing = float(
+            self.settings.value("font/line_spacing", 1.0, float)
+        )
         self._font_family = family
         self._font_size = size
         if app is not None:
             register_fonts()
             apply_font(app, family, size)
+        self._apply_row_heights()
         self._rebuild_appearance_menu()
 
 
@@ -935,12 +1026,17 @@ class MainWindow(QMainWindow):
         tracks = [t for t in tracks if t is not None]
         if not tracks:
             return
-        reply = QMessageBox.question(
-            self, "Remove tracks",
+        box = QMessageBox(self)
+        box.setWindowTitle("Remove tracks")
+        box.setTextFormat(Qt.TextFormat.RichText)
+        box.setText(_spaced_para(
             f"Remove {len(tracks)} track(s) from the iPod?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            self._line_spacing,
+        ))
+        box.setStandardButtons(
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
-        if reply != QMessageBox.StandardButton.Yes:
+        if box.exec() != QMessageBox.StandardButton.Yes:
             return
         for track in tracks:
             self.session.remove(track)
@@ -1249,19 +1345,29 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event) -> None:  # noqa: N802
         action = self._quit_action()
         if action == "transfer":
-            QMessageBox.information(
-                self, "Transfer in progress",
+            box = QMessageBox(self)
+            box.setWindowTitle("Transfer in progress")
+            box.setTextFormat(Qt.TextFormat.RichText)
+            box.setText(_spaced_para(
                 "A transfer is still running. Cancel it first, then close.",
-            )
+                self._line_spacing,
+            ))
+            box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            box.exec()
             event.ignore()
             return
         if action == "unsynced":
             box = QMessageBox(self)
             box.setWindowTitle("Unsynced changes")
-            box.setText("Changes have not been written to the iPod yet.")
-            box.setInformativeText(
-                "Sync writes them now. Quitting without syncing loses them."
-            )
+            box.setTextFormat(Qt.TextFormat.RichText)
+            box.setText(_spaced_para(
+                "Changes have not been written to the iPod yet.",
+                self._line_spacing,
+            ))
+            box.setInformativeText(_spaced_para(
+                "Sync writes them now. Quitting without syncing loses them.",
+                self._line_spacing,
+            ))
             sync_quit = box.addButton(
                 "Sync && Quit", QMessageBox.ButtonRole.AcceptRole
             )
