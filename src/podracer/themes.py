@@ -1178,6 +1178,64 @@ def dusk_flat() -> Theme:
     )
 
 
+def flat_earth() -> Theme:
+    """Flat Earth: cream + dark olive, terracotta touches, no gradients.
+
+    Palette as given (#ffeed6 #a5af79 #827148 #e8a07c). Cream panels;
+    the raw dark olive #827148 is only 4.19:1 as body text on the
+    cream, so body/placeholder run a derived darker #756641 (4.94:1)
+    while the olive stays the accent with white text (4.77:1).
+    Terracotta shows as the hover wash, olive as the row stripe. Flat:
+    identical gradient stops, button_to==accent.
+    """
+    return Theme(
+        name="Flat Earth",
+        colors={"cream": "#ffeed6", "olive": "#a5af79",
+                "dark-olive": "#827148", "terra": "#e8a07c"},
+        window_gradient=("#ffeed6", "#ffeed6"),   # flat
+        accent="#827148",               # dark olive, white text
+        accent2="#756641",              # derived darker: placeholder must read
+        panel_bg="#ffeed6",             # cream
+        panel_text="#756641",           # derived darker olive
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.06)",
+        status_text="#756641",
+        header_gradient=("#827148", "#827148"),   # flat olive
+        header_text="#ffffff",
+        hover_tint="rgba(232, 160, 124, 0.18)",   # terracotta wash
+        alternate_tint="rgba(165, 175, 121, 0.12)",  # olive stripe
+        button_to="#827148",            # same as accent: flat button
+    )
+
+
+def naan_binary() -> Theme:
+    """Naan Binary: the non-binary flag, dark.
+
+    Flag as given (#FFF430 yellow, #FFFFFF white, #9C59D1 purple,
+    #000000 black). Deep purple-black sweep; the yellow is the accent
+    with black text (15:1) and the header (the flag's top bar); a
+    light lavender accent2 carries borders/placeholder; the purple is
+    the hover wash.
+    """
+    return Theme(
+        name="Naan Binary",
+        colors={"yellow": "#FFF430", "white": "#FFFFFF",
+                "purple": "#9C59D1", "black": "#000000"},
+        window_gradient=("#241535", "#05030a"),
+        accent="#FFF430",               # yellow, black text
+        accent2="#b78be8",              # light lavender: placeholder must read
+        panel_bg="#12101f",             # near-black purple
+        panel_text="#f1eaff",           # pale lavender
+        text_on_accent="#1a1a1a",
+        status_bg="rgba(0, 0, 0, 0.40)",
+        status_text="#f1eaff",
+        header_gradient=("#FFF430", "#FFF430"),   # the flag's yellow bar
+        header_text="#1a1a1a",
+        hover_tint="rgba(156, 89, 209, 0.25)",    # purple wash
+        alternate_tint="rgba(255, 255, 255, 0.04)",
+    )
+
+
 def i_know_kung_fu() -> Theme:
     """I know Kung Fu: green monochrome terminal, Matrix phosphor.
 
@@ -1290,6 +1348,8 @@ THEMES: list[Theme] = [
     beige_flag(),
     flat_sunrise(),
     dusk_flat(),
+    flat_earth(),
+    naan_binary(),
 ]
 
 
