@@ -599,6 +599,23 @@ class AppearanceMenuTests(_QtCase):
         self.assertEqual(len(win._line_spacing_actions), len(LINE_SPACINGS))
         win.close()
 
+    def test_theme_menu_has_category_headers(self):
+        win = MainWindow()
+        theme_menu = win._theme_menu
+        categories = [t.category for t in THEMES]
+        expected: list[str] = []
+        last = None
+        for category in categories:
+            if category != last:
+                expected.append(category)
+                last = category
+        headers = [
+            a.text() for a in theme_menu.actions()
+            if not a.isEnabled() and a.text() in set(categories)
+        ]
+        self.assertEqual(headers, expected)
+        win.close()
+
     def test_line_spacing_applies_and_checks(self):
         win = MainWindow()
         baseline = win.lib_view.verticalHeader().defaultSectionSize()

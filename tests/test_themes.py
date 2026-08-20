@@ -63,6 +63,19 @@ class PaletteTests(unittest.TestCase):
             self.assertEqual(theme.button_to, theme.accent,
                              f"{theme.name} button flat")
 
+    def test_flat_category_is_actually_flat(self):
+        # The Flat menu category must only hold themes that follow the
+        # flat convention: no sweeps, flat buttons.
+        flat = [t for t in THEMES if t.category == "Flat"]
+        self.assertGreaterEqual(len(flat), 4)
+        for theme in flat:
+            self.assertEqual(theme.window_gradient[0], theme.window_gradient[1],
+                             f"{theme.name} window gradient")
+            self.assertEqual(theme.header_gradient[0], theme.header_gradient[1],
+                             f"{theme.name} header gradient")
+            self.assertEqual(theme.button_to, theme.accent,
+                             f"{theme.name} button flat")
+
 
 class ApplyThemeTests(unittest.TestCase):
     @classmethod

@@ -692,7 +692,8 @@ class MainWindow(QMainWindow):
         panel_text = theme.panel_text
         accent_text = theme.text_on_accent
 
-        theme_menu = self.appearance_menu.addMenu("Theme")
+        self._theme_menu = self.appearance_menu.addMenu("Theme")
+        theme_menu = self._theme_menu
         theme_menu.setIcon(menu_icon("palette", panel_text, accent_text))
         self._system_theme_action = theme_menu.addAction(
             f"{SYSTEM_THEME}\t(Boring)"
@@ -705,7 +706,17 @@ class MainWindow(QMainWindow):
         self._system_theme_action.setChecked(self._theme_name == SYSTEM_THEME)
         self._system_theme_action.triggered.connect(self._set_system_theme)
         theme_menu.addSeparator()
+        last_category = None
         for theme in THEMES:
+            # Category headers are disabled labels, never theme actions:
+            # _theme_actions stays exactly the theme list for the tests.
+            if theme.category != last_category:
+                header = theme_menu.addAction(theme.category)
+                header.setEnabled(False)
+                font = header.font()
+                font.setBold(True)
+                header.setFont(font)
+                last_category = theme.category
             action = theme_menu.addAction(theme_label(theme))
             action.setIcon(menu_icon(
                 "moon" if is_dark(theme) else "sun",

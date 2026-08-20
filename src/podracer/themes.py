@@ -101,6 +101,7 @@ class Theme:
     button_pressed: str = ""                     # pressed state
     hover_tint: str = ""                         # item hover wash
     alternate_tint: str = ""                     # row striping
+    category: str = "Classic"                    # menu grouping header
 
     def _role(self, value: str, default: str) -> str:
         return value or default
@@ -1248,6 +1249,7 @@ def flat_sunrise() -> Theme:
         header_gradient=("#ffa372", "#ffa372"),   # flat salmon
         header_text="#1f2a38",
         button_to="#ed6663",            # same as accent: flat button
+        category="Flat",
     )
 
 
@@ -1274,6 +1276,7 @@ def dusk_flat() -> Theme:
         header_gradient=("#26334a", "#26334a"),   # flat
         header_text="#e6edf5",
         button_to="#43658b",            # same as accent: flat button
+        category="Flat",
     )
 
 
@@ -1304,6 +1307,35 @@ def flat_earth() -> Theme:
         hover_tint="rgba(232, 160, 124, 0.18)",   # terracotta wash
         alternate_tint="rgba(165, 175, 121, 0.12)",  # olive stripe
         button_to="#827148",            # same as accent: flat button
+        category="Flat",
+    )
+
+
+def mint_at_night() -> Theme:
+    """Mint at Night: deep-green night, flat mint, no gradients.
+
+    Palette as given (#091413 #285a48 #408a71 #b0e4cc, colorhunt.co).
+    Near-black green panels carry pale mint text; the mint #408a71 is
+    lightened to #4c9c7e so near-black text clears AA with margin
+    (5.7:1 vs the raw 4.5:1), the deep mint is the flat header. Flat:
+    identical gradient stops, button_to==accent.
+    """
+    return Theme(
+        name="Mint at Night",
+        colors={"night": "#091413", "deep-mint": "#285a48",
+                "mint": "#408a71", "pale-mint": "#b0e4cc"},
+        window_gradient=("#091413", "#091413"),   # flat
+        accent="#4c9c7e",               # mint lightened: near-black text
+        accent2="#b0e4cc",              # pale mint: placeholder must read
+        panel_bg="#091413",             # night
+        panel_text="#b0e4cc",           # pale mint
+        text_on_accent="#091413",       # night
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#b0e4cc",
+        header_gradient=("#285a48", "#285a48"),   # flat deep mint
+        header_text="#ffffff",
+        button_to="#4c9c7e",            # same as accent: flat button
+        category="Flat",
     )
 
 
@@ -1446,11 +1478,11 @@ THEMES: list[Theme] = [
     give_me_the_night(),
     blue_office(),
     beige_flag(),
+    human(),
     flat_sunrise(),
     dusk_flat(),
     flat_earth(),
-    naan_binary(),
-    human(),
+    mint_at_night(),
 ]
 
 
