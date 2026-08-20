@@ -85,11 +85,16 @@ class PaletteTests(unittest.TestCase):
         self.assertEqual(
             by_category["ATLA"],
             {"Water Tribe", "Last Agni Kai", "Fire Nation",
-             "Earth Kingdom", "Air Nomad"},
+             "Earth Kingdom", "Air Nomad", "Si Wong Desert"},
         )
         self.assertEqual(
             by_category["Computery Stuff"],
             {"I know Kung Fu", "My name is Neo"},
+        )
+        self.assertEqual(
+            by_category["Retro Aesthetics"],
+            {"Frutiger Aero", "Aero at Night", "Aqua", "Dark Aqua",
+             "Human", "Human Dark"},
         )
         self.assertIn("Mint at Night", by_category["Flat"])
         self.assertNotIn("Naan Binary", by_category["Flat"])

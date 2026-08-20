@@ -13,7 +13,10 @@ heading, so an optional nickname in quotes lands in the title.
 - Two new themes: Human (Ubuntu 8.04 Hardy Heron's default — warm beige/brown, palette taken from the shipped human-theme gtkrc) and Aero at Night (Frutiger Aero's aqua on a deep-teal night). Both WCAG AA verified.
 - New theme: Mint at Night — flat deep-green night with mint accents (palette #091413 #285a48 #408a71 #b0e4cc, colorhunt.co). WCAG AA verified.
 - Themes are now categorized in the Theme menu: category headers group the flat themes (Flat Sunrise, Dusk Flat, Flat Earth, Mint at Night) under "Flat"; the rest stay under "Classic".
-- Theme menu categories: ATLA (Water Tribe, Last Agni Kai, Fire Nation, Earth Kingdom, Air Nomad) and Computery Stuff (I know Kung Fu, My name is Neo).
+- Theme menu categories: ATLA (Water Tribe, Last Agni Kai, Fire Nation, Earth Kingdom, Air Nomad, Si Wong Desert) and Computery Stuff (I know Kung Fu, My name is Neo).
+- New theme: Si Wong Desert — sandbender dunes at dusk (umber/ochre/amber, palette #7b542f #b6771d #ff9d00 #ffcf71, colorhunt.co). WCAG AA verified.
+- New theme: Human Dark — Hardy Heron's Human on dark-brown panels with the classic Ubuntu orange titlebar (#dd4814, darkened for AA). WCAG AA verified.
+- New theme menu category: Retro Aesthetics (Frutiger Aero, Aero at Night, Aqua, Dark Aqua, Human, Human Dark).
 - Library: every song row now shows a small theme-tinted music note beside its title.
 
 ## [1.2.1] - 2026-08-19 "Headlong"

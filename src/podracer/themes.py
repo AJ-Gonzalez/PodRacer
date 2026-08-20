@@ -621,6 +621,7 @@ def frutiger_aero() -> Theme:
         header_gradient=("#0e7490", "#0b5f74"),
         header_text="#ffffff",
         button_to="#0e5f73",            # glossy dark-teal second stop
+        category="Retro Aesthetics",
     )
 
 
@@ -649,6 +650,7 @@ def aqua() -> Theme:
         header_gradient=("#2e6db4", "#1f4f8f"),
         header_text="#ffffff",
         button_to="#1f4f8f",            # glossy blue second stop
+        category="Retro Aesthetics",
     )
 
 
@@ -676,6 +678,7 @@ def dark_aqua() -> Theme:
         header_gradient=("#2e6db4", "#1f4f8f"),
         header_text="#ffffff",
         button_to="#1f4f8f",
+        category="Retro Aesthetics",
     )
 
 
@@ -709,6 +712,38 @@ def human() -> Theme:
         status_text="#ffffff",
         header_gradient=("#8f5f4a", "#6e4a3a"),
         header_text="#ffffff",
+        category="Retro Aesthetics",
+    )
+
+
+def human_dark() -> Theme:
+    """Human Dark: Hardy Heron's Human, sunk into a dark-brown night
+    with the classic Ubuntu orange on the titlebar.
+
+    Same brown family as Human on dark panels; the header carries the
+    brand orange (#dd4814, darkened to #c13d11 so white text clears
+    AA) — the orange the Hardy titlebars evoke. Warm tan text on
+    near-black brown panels.
+    """
+    return Theme(
+        name="Human Dark",
+        colors={
+            "human-fg": "#101010",
+            "human-bg": "#e6ddd5",
+            "human-selected": "#8f5f4a",
+            "ubuntu-orange": "#dd4814",
+        },
+        window_gradient=("#3a2a1e", "#241a12"),
+        accent="#c13d11",               # ubuntu orange darkened: white clears AA
+        accent2="#e8a87c",              # warm peach: placeholder must read
+        panel_bg="#241a12",             # near-black brown
+        panel_text="#f0e6dc",           # warm tan
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#f0e6dc",
+        header_gradient=("#c13d11", "#9e310e"),   # the orange titlebar
+        header_text="#ffffff",
+        category="Retro Aesthetics",
     )
 
 
@@ -741,6 +776,7 @@ def aero_at_night() -> Theme:
         header_gradient=("#0e7490", "#0b3a4a"),
         header_text="#ffffff",
         button_to="#096475",            # glossy dark-teal second stop
+        category="Retro Aesthetics",
     )
 
 
@@ -1179,6 +1215,35 @@ def air_nomad() -> Theme:
     )
 
 
+def si_wong_desert() -> Theme:
+    """Si Wong Desert: sandbender dunes at dusk — umber, ochre, amber.
+
+    Palette as given (#7b542f #b6771d #ff9d00 #ffcf71, colorhunt.co).
+    The umber is the panel; body/header text run a derived pale sand
+    (the raw sand is 4.58:1 on umber, too thin), and the amber accent
+    carries near-black text (white fails at ~2:1). The amber is also
+    the button's second stop: darkening it drops below AA against the
+    dark text, so the button stays flat.
+    """
+    return Theme(
+        name="Si Wong Desert",
+        colors={"umber": "#7b542f", "ochre": "#b6771d",
+                "amber": "#ff9d00", "sand": "#ffcf71"},
+        window_gradient=("#6a4526", "#7b542f"),
+        accent="#ff9d00",               # amber: near-black text clears AA
+        accent2="#ffd98c",              # sand lightened: placeholder must read
+        panel_bg="#7b542f",             # umber
+        panel_text="#ffe0a8",           # derived pale sand
+        text_on_accent="#1a0e00",       # derived near-black brown
+        status_bg="rgba(0, 0, 0, 0.30)",
+        status_text="#ffe0a8",
+        header_gradient=("#6a4526", "#7b542f"),
+        header_text="#ffe0a8",
+        button_to="#ff9d00",            # amber: darkening breaks AA with dark text
+        category="ATLA",
+    )
+
+
 def blue_office() -> Theme:
     """Blue Office: light office-slate blues.
 
@@ -1452,8 +1517,8 @@ def give_me_the_night() -> Theme:
 
 
 # Registry order is menu order, grouped by category so the menu's
-# category headers appear exactly once, contiguously: Classic, ATLA,
-# Computery Stuff, Flat.
+# category headers appear exactly once, contiguously: Classic, Retro
+# Aesthetics, ATLA, Computery Stuff, Flat.
 THEMES: list[Theme] = [
     # Classic
     magenta_daydream(),
@@ -1465,10 +1530,6 @@ THEMES: list[Theme] = [
     butch_cassidy(),
     analog_sunrise(),
     insane_default(),
-    frutiger_aero(),
-    aero_at_night(),
-    aqua(),
-    dark_aqua(),
     just_blues(),
     lilac_love(),
     minty_forest(),
@@ -1482,13 +1543,20 @@ THEMES: list[Theme] = [
     give_me_the_night(),
     blue_office(),
     beige_flag(),
+    # Retro Aesthetics
+    frutiger_aero(),
+    aero_at_night(),
+    aqua(),
+    dark_aqua(),
     human(),
+    human_dark(),
     # ATLA
     water_tribe(),
     last_agni_kai(),
     fire_nation(),
     earth_kingdom(),
     air_nomad(),
+    si_wong_desert(),
     # Computery Stuff
     i_know_kung_fu(),
     my_name_is_neo(),
