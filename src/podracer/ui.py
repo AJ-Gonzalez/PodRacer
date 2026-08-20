@@ -19,7 +19,7 @@ import time
 from datetime import date
 from pathlib import Path
 
-from PySide6.QtGui import QFontMetrics, QKeySequence, QShortcut
+from PySide6.QtGui import QFontMetrics, QIcon, QKeySequence, QShortcut
 from PySide6.QtCore import (
     QAbstractTableModel,
     QModelIndex,
@@ -103,6 +103,11 @@ class TracksModel(QAbstractTableModel):
     def __init__(self, session: SyncSession | None = None) -> None:
         super().__init__()
         self.session = session
+        self.row_icon: QIcon | None = None
+
+    def set_row_icon(self, icon: QIcon | None) -> None:
+        """The music note painted beside every song title (theme-tinted)."""
+        self.row_icon = icon
 
     def set_session(self, session: SyncSession | None) -> None:
         self.beginResetModel()
@@ -121,6 +126,8 @@ class TracksModel(QAbstractTableModel):
         if not index.isValid() or self.session is None:
             return None
         track = self.session.tracks[index.row()]
+        if role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
+            return self.row_icon
         if role == Qt.ItemDataRole.DisplayRole:
             return {
                 0: track.title or "",
@@ -844,6 +851,11 @@ class MainWindow(QMainWindow):
             (self.appearance_button, "paintbrush"),
         ):
             button.setIcon(tinted_icon(name, color))
+        # Library rows sit on the panel, so the music note uses the
+        # panel text color (the AA-checked pair, like the labels).
+        self.tracks_model.set_row_icon(
+            tinted_icon("music", theme.panel_text)
+        )
 
     def _apply_font_family(self, family: str) -> None:
         self._set_font(family, self._font_size)

@@ -1054,6 +1054,7 @@ def water_tribe() -> Theme:
         status_text="#2a4d88",
         header_gradient=("#d9d9d8", "#bac3ce"),   # 2nd stop lightened: ocean text must read on the gray
         header_text="#2a4d88",
+        category="ATLA",
     )
 
 
@@ -1084,6 +1085,7 @@ def last_agni_kai() -> Theme:
         status_text="#ffffff",
         header_gradient=("#596478", "#005e88"),
         header_text="#ffffff",
+        category="ATLA",
     )
 
 
@@ -1113,6 +1115,7 @@ def fire_nation() -> Theme:
         status_text="#f5e6d8",
         header_gradient=("#781111", "#2b2424"),
         header_text="#f5e6d8",
+        category="ATLA",
     )
 
 
@@ -1142,6 +1145,7 @@ def earth_kingdom() -> Theme:
         status_text="#e2ecd9",
         header_gradient=("#145425", "#0c3808"),
         header_text="#e2ecd9",
+        category="ATLA",
     )
 
 
@@ -1171,6 +1175,7 @@ def air_nomad() -> Theme:
         status_text="#1a3a5c",
         header_gradient=("#aad8ff", "#93c6ef"),
         header_text="#1a3a5c",
+        category="ATLA",
     )
 
 
@@ -1388,6 +1393,7 @@ def i_know_kung_fu() -> Theme:
         status_text="#00ff41",
         header_gradient=("#003d1f", "#001a0d"),
         header_text="#00ff41",
+        category="Computery Stuff",
     )
 
 
@@ -1411,6 +1417,7 @@ def my_name_is_neo() -> Theme:
         status_text="#c084fc",
         header_gradient=("#3b0764", "#1a0233"),
         header_text="#c084fc",
+        category="Computery Stuff",
     )
 
 
@@ -1444,7 +1451,11 @@ def give_me_the_night() -> Theme:
     )
 
 
+# Registry order is menu order, grouped by category so the menu's
+# category headers appear exactly once, contiguously: Classic, ATLA,
+# Computery Stuff, Flat.
 THEMES: list[Theme] = [
+    # Classic
     magenta_daydream(),
     grey_moonlight(),
     zen_garden(),
@@ -1468,17 +1479,20 @@ THEMES: list[Theme] = [
     atom_blue(),
     atom_lilac(),
     coffee_shop(),
+    give_me_the_night(),
+    blue_office(),
+    beige_flag(),
+    human(),
+    # ATLA
     water_tribe(),
     last_agni_kai(),
     fire_nation(),
     earth_kingdom(),
     air_nomad(),
+    # Computery Stuff
     i_know_kung_fu(),
     my_name_is_neo(),
-    give_me_the_night(),
-    blue_office(),
-    beige_flag(),
-    human(),
+    # Flat
     flat_sunrise(),
     dusk_flat(),
     flat_earth(),

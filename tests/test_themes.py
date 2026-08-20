@@ -76,6 +76,24 @@ class PaletteTests(unittest.TestCase):
             self.assertEqual(theme.button_to, theme.accent,
                              f"{theme.name} button flat")
 
+    def test_category_membership(self):
+        # Pin the user's grouping so a future edit cannot silently
+        # move a theme out of its category.
+        by_category: dict[str, set[str]] = {}
+        for theme in THEMES:
+            by_category.setdefault(theme.category, set()).add(theme.name)
+        self.assertEqual(
+            by_category["ATLA"],
+            {"Water Tribe", "Last Agni Kai", "Fire Nation",
+             "Earth Kingdom", "Air Nomad"},
+        )
+        self.assertEqual(
+            by_category["Computery Stuff"],
+            {"I know Kung Fu", "My name is Neo"},
+        )
+        self.assertIn("Mint at Night", by_category["Flat"])
+        self.assertNotIn("Naan Binary", by_category["Flat"])
+
 
 class ApplyThemeTests(unittest.TestCase):
     @classmethod

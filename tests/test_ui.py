@@ -63,6 +63,22 @@ class _FakeSession:
     tracks = [Track(title="A"), Track(title="B"), Track(title="C")]
 
 
+class TracksModelIconTests(unittest.TestCase):
+    def test_row_icon_shows_in_title_column_only(self):
+        model = TracksModel()
+        model.set_session(_FakeSession())
+        index = model.index(0, 0)
+        self.assertIsNone(
+            model.data(index, Qt.ItemDataRole.DecorationRole))
+        from PySide6.QtGui import QIcon
+        icon = QIcon()
+        model.set_row_icon(icon)
+        self.assertIs(
+            model.data(index, Qt.ItemDataRole.DecorationRole), icon)
+        self.assertIsNone(
+            model.data(model.index(0, 1), Qt.ItemDataRole.DecorationRole))
+
+
 class _QtCase(unittest.TestCase):
     """Closes every leaked widget so Qt teardown does not segfault."""
 
