@@ -1125,6 +1125,59 @@ def beige_flag() -> Theme:
     )
 
 
+def flat_sunrise() -> Theme:
+    """Flat Sunrise: light sky + coral, no gradients.
+
+    Palette as given (#4e89ae #43658b #ed6663 #ffa372). Pale-sky
+    panels carry dark navy text; the coral is the accent with dark text
+    (the steel #4e89ae is a mid-tone neither white nor dark text clears
+    4.5 against, so it can't accent); the slate carries borders, the
+    salmon the header. Flat: identical gradient stops, button_to==accent.
+    """
+    return Theme(
+        name="Flat Sunrise",
+        colors={"steel": "#4e89ae", "slate": "#43658b",
+                "coral": "#ed6663", "salmon": "#ffa372"},
+        window_gradient=("#f5f8fb", "#f5f8fb"),   # flat
+        accent="#ed6663",               # coral, dark text
+        accent2="#43658b",              # slate: borders/placeholder
+        panel_bg="#f5f8fb",             # pale sky
+        panel_text="#1f2a38",           # derived navy
+        text_on_accent="#1a1a2a",       # derived very-dark navy
+        status_bg="rgba(255, 255, 255, 0.40)",
+        status_text="#1f2a38",
+        header_gradient=("#ffa372", "#ffa372"),   # flat salmon
+        header_text="#1f2a38",
+        button_to="#ed6663",            # same as accent: flat button
+    )
+
+
+def dusk_flat() -> Theme:
+    """Dusk Flat: deep steel + warm ember, no gradients.
+
+    Same palette, the dark side. Deep-steel panels carry pale text; the
+    slate is the accent with white text; the salmon is the border/
+    placeholder (a warm ember against the dark); a subtly lighter steel
+    header stays flat.
+    """
+    return Theme(
+        name="Dusk Flat",
+        colors={"steel": "#4e89ae", "slate": "#43658b",
+                "coral": "#ed6663", "salmon": "#ffa372"},
+        window_gradient=("#1b2431", "#1b2431"),   # flat
+        accent="#43658b",               # slate, white text
+        accent2="#ffa372",              # salmon: borders/placeholder
+        panel_bg="#1b2431",             # deep steel
+        panel_text="#e6edf5",           # pale ice
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#e6edf5",
+        header_gradient=("#26334a", "#26334a"),   # flat
+        header_text="#e6edf5",
+        button_to="#43658b",            # same as accent: flat button
+    )
+
+
 def i_know_kung_fu() -> Theme:
     """I know Kung Fu: green monochrome terminal, Matrix phosphor.
 
@@ -1235,6 +1288,8 @@ THEMES: list[Theme] = [
     give_me_the_night(),
     blue_office(),
     beige_flag(),
+    flat_sunrise(),
+    dusk_flat(),
 ]
 
 
