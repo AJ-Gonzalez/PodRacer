@@ -91,13 +91,16 @@ class PaletteTests(unittest.TestCase):
         )
         self.assertEqual(
             by_category["Psychonaut"],
-            {"Magenta Daydream", "Analog Sunrise", "Stoner Shore",
-             "Give me the night"},
+            {"Magenta Daydream", "Bubblegum Haze", "Analog Sunrise",
+             "Stoner Shore"},
         )
         self.assertEqual(
             by_category["Computery Stuff"],
-            {"I know Kung Fu", "My name is Neo", "Solarized Dark"},
+            {"I know Kung Fu", "My name is Neo", "Solarized Dark",
+             "Kanagawa Terminal", "Miasma Terminal",
+             "Tokyo Night Terminal"},
         )
+        self.assertNotIn("Give me the night", by_category["Psychonaut"])
         self.assertEqual(
             by_category["Retro Aesthetics"],
             {"Frutiger Aero", "Aero at Night", "Aqua", "Dark Aqua",

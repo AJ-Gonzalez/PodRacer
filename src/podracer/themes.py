@@ -447,6 +447,7 @@ def bubblegum_haze() -> Theme:
         status_text="#40262a",
         header_gradient=("#ffc5aa", "#bbf1d2"),
         header_text="#40262a",
+        category="Psychonaut",
     )
 
 
@@ -1709,6 +1710,118 @@ def solarized_dark() -> Theme:
     )
 
 
+def kanagawa_terminal() -> Theme:
+    """Kanagawa Terminal: the Kanagawa wave color scheme.
+
+    Palette from terminalcolors.com (alacritty export): ink #1f1f28
+    panels, pale #dcd7ba text, the warm red #c34043 accent with white
+    text (5.1:1); header runs red down to the near-black ink.
+    """
+    return Theme(
+        name="Kanagawa Terminal",
+        colors={"bg": "#1f1f28", "fg": "#dcd7ba", "black": "#16161d",
+                "red": "#c34043", "green": "#76946a", "yellow": "#c0a36e",
+                "blue": "#7e9cd8", "magenta": "#957fb8", "cyan": "#6a9589",
+                "white": "#c8c093"},
+        window_gradient=("#1f1f28", "#16161d"),
+        accent="#c34043",               # kanagawa red: white text clears AA
+        accent2="#dcd7ba",              # pale foreground: placeholder must read
+        panel_bg="#1f1f28",             # ink
+        panel_text="#dcd7ba",           # pale
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#dcd7ba",
+        header_gradient=("#c34043", "#16161d"),
+        header_text="#ffffff",
+        category="Computery Stuff",
+    )
+
+
+def miasma_terminal() -> Theme:
+    """Miasma Terminal: the Miasma color scheme.
+
+    Palette from terminalcolors.com (alacritty export): near-black
+    #222222 panels, muted #c2c2b0 text, the earthy red-brown #685742
+    accent with white text (6.9:1); gold #c9a554 carries the
+    placeholder/focus.
+    """
+    return Theme(
+        name="Miasma Terminal",
+        colors={"bg": "#222222", "fg": "#c2c2b0", "black": "#000000",
+                "red": "#685742", "green": "#5f875f", "yellow": "#b36d43",
+                "blue": "#78824b", "magenta": "#bb7744", "cyan": "#c9a554",
+                "white": "#d7c483"},
+        window_gradient=("#222222", "#1a1a1a"),
+        accent="#685742",               # earthy red: white text clears AA
+        accent2="#c9a554",              # gold: placeholder must read
+        panel_bg="#222222",
+        panel_text="#c2c2b0",
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#c2c2b0",
+        header_gradient=("#685742", "#222222"),
+        header_text="#ffffff",
+        category="Computery Stuff",
+    )
+
+
+def tokyo_night_terminal() -> Theme:
+    """Tokyo Night Terminal: the Tokyo Night color scheme.
+
+    Palette from terminalcolors.com (alacritty export): deep blue-black
+    #1a1b26 panels, lavender #c0caf5 text, the signature blue #7aa2f7
+    accent with the panel color as text (7.1:1). The blue is also the
+    button's second stop: darkening it breaks AA with the dark text.
+    """
+    return Theme(
+        name="Tokyo Night Terminal",
+        colors={"bg": "#1a1b26", "fg": "#c0caf5", "black": "#15161e",
+                "red": "#f7768e", "green": "#9ece6a", "yellow": "#e0af68",
+                "blue": "#7aa2f7", "magenta": "#bb9af7", "cyan": "#7dcfff",
+                "white": "#a9b1d6"},
+        window_gradient=("#1a1b26", "#16161e"),
+        accent="#7aa2f7",               # tokyo blue: panel text clears AA
+        accent2="#c0caf5",              # lavender: placeholder must read
+        panel_bg="#1a1b26",
+        panel_text="#c0caf5",
+        text_on_accent="#1a1b26",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#c0caf5",
+        header_gradient=("#283457", "#1a1b26"),
+        header_text="#ffffff",
+        button_to="#7aa2f7",            # blue: darkening breaks AA with dark text
+        category="Computery Stuff",
+    )
+
+
+def tokyo_night_2d() -> Theme:
+    """Tokyo Night 2D: the Tokyo Night palette, flat.
+
+    Same deep blue-black and signature blue accent, flattened: solid
+    #1a1b26 backdrop, solid #283457 header, flat blue button.
+    """
+    return Theme(
+        name="Tokyo Night 2D",
+        colors={"bg": "#1a1b26", "fg": "#c0caf5", "black": "#15161e",
+                "red": "#f7768e", "green": "#9ece6a", "yellow": "#e0af68",
+                "blue": "#7aa2f7", "magenta": "#bb9af7", "cyan": "#7dcfff",
+                "white": "#a9b1d6"},
+        window_gradient=("#1a1b26", "#1a1b26"),   # flat
+        accent="#7aa2f7",               # tokyo blue: panel text clears AA
+        accent2="#c0caf5",              # lavender: placeholder must read
+        panel_bg="#1a1b26",
+        panel_text="#c0caf5",
+        text_on_accent="#1a1b26",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#c0caf5",
+        header_gradient=("#283457", "#283457"),   # flat
+        header_text="#ffffff",
+        button_to="#7aa2f7",            # same as accent: flat button
+        category="Flat",
+        button_radius=0,
+    )
+
+
 def give_me_the_night() -> Theme:
     """Give me the night: charcoal -> plum -> magenta night palette.
 
@@ -1736,7 +1849,6 @@ def give_me_the_night() -> Theme:
         status_text="#d9a8c3",
         header_gradient=("#3b1c32", "#6a1e55"),
         header_text="#ffffff",
-        category="Psychonaut",
     )
 
 
@@ -1747,7 +1859,6 @@ THEMES: list[Theme] = [
     # Classic
     grey_moonlight(),
     zen_garden(),
-    bubblegum_haze(),
     hide_and_seek(),
     lipstick_hyperfemme(),
     butch_cassidy(),
@@ -1763,11 +1874,12 @@ THEMES: list[Theme] = [
     coffee_shop(),
     blue_office(),
     beige_flag(),
+    give_me_the_night(),
     # Psychonaut
     magenta_daydream(),
+    bubblegum_haze(),
     analog_sunrise(),
     stoner_shore(),
-    give_me_the_night(),
     # Retro Aesthetics
     frutiger_aero(),
     aero_at_night(),
@@ -1786,6 +1898,9 @@ THEMES: list[Theme] = [
     i_know_kung_fu(),
     my_name_is_neo(),
     solarized_dark(),
+    kanagawa_terminal(),
+    miasma_terminal(),
+    tokyo_night_terminal(),
     # Flat
     flat_sunrise(),
     dusk_flat(),
@@ -1797,6 +1912,7 @@ THEMES: list[Theme] = [
     bought_a_binder(),
     square_rooms(),
     hip_to_be_square(),
+    tokyo_night_2d(),
 ]
 
 

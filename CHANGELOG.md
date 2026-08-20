@@ -22,7 +22,8 @@ heading, so an optional nickname in quotes lands in the title.
 - New theme: Solarized Dark — Ethan Schoonover's Solarized dark terminal palette (base03/base0/base02, cyan accent). Computery Stuff category. WCAG AA verified.
 - New theme: Machine in Motion — near-black steel with a red warning accent (palette #171717 #444444 #da0037 #ededed, colorhunt.co), flat with square buttons. WCAG AA verified.
 - New flat themes: Bought a Binder (Butch Cassidy flattened), Square Rooms (Human Dark flattened — solid brown + solid orange titlebar), and Hip to be Square (muted American Beauty/Psycho palette #d7cba2 #d4cfc1 #6d6e8e #343030 #577655, color-hex). All with square buttons, WCAG AA verified.
-- New theme menu category: Psychonaut (Magenta Daydream, Analog Sunrise, Stoner Shore, Give me the night).
+- New theme menu category: Psychonaut (Magenta Daydream, Bubblegum Haze, Analog Sunrise, Stoner Shore).
+- New Computery Stuff themes: Kanagawa Terminal, Miasma Terminal, and Tokyo Night Terminal (palettes from terminalcolors.com), plus the flat Tokyo Night 2D. All WCAG AA verified.
 - Library: every song row now shows a small theme-tinted music note beside its title.
 
 ## [1.2.1] - 2026-08-19 "Headlong"
