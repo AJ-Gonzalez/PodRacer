@@ -6,6 +6,10 @@ heading, so an optional nickname in quotes lands in the title.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-08-19 "Headlong"
+
+- Packaging: the .deb now installs the desktop entry, app icon, and AppStream metadata (previously binary-only, so the app never appeared in the DE menu).
+
 ## [1.2.0] - 2026-08-19 "Headlong"
 
 - Accessibility: Line spacing setting (Appearance → Line spacing — Normal/Relaxed/Roomy/Spacious) scales list rows and wrapped dialog text.

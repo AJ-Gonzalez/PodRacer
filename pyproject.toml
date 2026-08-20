@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 # podcast library; the codec publishes separately as 'podracer_db'
 # (own pyproject under packages/podracer_db). Imports stay 'podracer'.
 name = "podracer_mapple"
-version = "1.2.0"
+version = "1.2.1"
 description = "Transfer music to an iPod from Linux, no iTunes"
 license = "Apache-2.0"
 requires-python = ">=3.11"
