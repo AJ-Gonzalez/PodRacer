@@ -690,6 +690,73 @@ def aqua() -> Theme:
     )
 
 
+def aqua_pilled() -> Theme:
+    """Aqua-pilled: the Aqua palette with pill-shaped buttons.
+
+    Identical colors to Aqua, but button_radius = half the button
+    height (~28px), so every button is a full capsule.
+    """
+    return Theme(
+        name="Aqua-pilled",
+        colors={
+            "pinstripe": "#7f9fc9",
+            "pale-aqua": "#dfeaf7",
+            "aqua-blue": "#2e6db4",
+            "cobalt": "#1f4f8f",
+            "sky": "#3b7dd8",
+            "cloud": "#f4f6f9",
+            "navy": "#17263a",
+            "ink": "#1c2733",
+        },
+        window_gradient=("#7f9fc9", "#dfeaf7"),
+        accent="#2e6db4",
+        accent2="#286dcb",
+        panel_bg="#f4f6f9",
+        panel_text="#1c2733",
+        text_on_accent="#ffffff",
+        status_bg="rgba(255, 255, 255, 0.45)",
+        status_text="#17263a",
+        header_gradient=("#2e6db4", "#1f4f8f"),
+        header_text="#ffffff",
+        button_to="#1f4f8f",
+        button_radius=14,               # pill
+        category="Retro Aesthetics",
+    )
+
+
+def aqua_pilled_dark() -> Theme:
+    """Aqua-Pilled Dark: the Dark Aqua palette with pill-shaped buttons.
+
+    Identical colors to Dark Aqua, with pill buttons (radius = half
+    the ~28px button height).
+    """
+    return Theme(
+        name="Aqua-Pilled Dark",
+        colors={
+            "midnight": "#152238",
+            "steel": "#2b4a6f",
+            "aqua-blue": "#2e6db4",
+            "cobalt": "#1f4f8f",
+            "sky": "#3b7dd8",
+            "slate": "#1c2733",
+            "ice": "#dbe7f5",
+        },
+        window_gradient=("#152238", "#2b4a6f"),
+        accent="#2e6db4",
+        accent2="#6e9ee2",
+        panel_bg="#1c2733",
+        panel_text="#dbe7f5",
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#dbe7f5",
+        header_gradient=("#2e6db4", "#1f4f8f"),
+        header_text="#ffffff",
+        button_to="#1f4f8f",
+        button_radius=14,               # pill
+        category="Retro Aesthetics",
+    )
+
+
 def dark_aqua() -> Theme:
     """Dark Aqua: the Aqua blues sunk into a deep-navy night."""
     return Theme(
@@ -1939,7 +2006,9 @@ THEMES: list[Theme] = [
     frutiger_aero(),
     aero_at_night(),
     aqua(),
+    aqua_pilled(),
     dark_aqua(),
+    aqua_pilled_dark(),
     human(),
     human_dark(),
     xp_memories(),

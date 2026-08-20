@@ -27,6 +27,7 @@ heading, so an optional nickname in quotes lands in the title.
 - New theme: XP Memories — Windows XP Luna (XP blue titlebar/buttons, beige window face, XP navy text, Bliss-sky backdrop). Retro Aesthetics category. WCAG AA verified.
 - Theme menu: each category (Classic, Psychonaut, Retro Aesthetics, ATLA, Computery Stuff, Flat) is now its own submenu instead of inline headers.
 - New theme: Windows 95 — the classic face, flat (gray #c0c0c0 panels, navy #000080 titlebar/buttons, teal #008080 desktop backdrop, square buttons). WCAG AA verified.
+- New themes: Aqua-pilled and Aqua-Pilled Dark — the Aqua/Dark Aqua palettes with pill-shaped (capsule) buttons. Retro Aesthetics category.
 - Library: every song row now shows a small theme-tinted music note beside its title.
 
 ## [1.2.1] - 2026-08-19 "Headlong"

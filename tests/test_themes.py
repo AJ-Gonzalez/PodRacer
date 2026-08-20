@@ -103,11 +103,16 @@ class PaletteTests(unittest.TestCase):
         self.assertNotIn("Give me the night", by_category["Psychonaut"])
         self.assertEqual(
             by_category["Retro Aesthetics"],
-            {"Frutiger Aero", "Aero at Night", "Aqua", "Dark Aqua",
-             "Human", "Human Dark", "XP Memories"},
+            {"Frutiger Aero", "Aero at Night", "Aqua", "Aqua-pilled",
+             "Dark Aqua", "Aqua-Pilled Dark", "Human", "Human Dark",
+             "XP Memories"},
         )
         self.assertIn("Mint at Night", by_category["Flat"])
         self.assertNotIn("Naan Binary", by_category["Flat"])
+        # The pilled Aqua pair must keep their capsule radius.
+        for name in ("Aqua-pilled", "Aqua-Pilled Dark"):
+            theme = theme_by_name(name)
+            self.assertEqual(theme.button_radius, 14, name)
 
 
 class ApplyThemeTests(unittest.TestCase):
