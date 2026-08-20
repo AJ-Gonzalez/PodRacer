@@ -813,6 +813,33 @@ def square_rooms() -> Theme:
     )
 
 
+def xp_memories() -> Theme:
+    """XP Memories: Windows XP Luna, the Bliss-era blue.
+
+    The Luna chrome: the XP blue #0054e3 titlebar/buttons with white
+    text, the beige window face #ece9d8 panels with black text, the
+    XP navy #21427b for focus/placeholder, a soft Bliss-sky sweep as
+    the backdrop.
+    """
+    return Theme(
+        name="XP Memories",
+        colors={"xp-blue": "#0054e3", "xp-blue-light": "#2f8ff2",
+                "face": "#ece9d8", "xp-navy": "#21427b",
+                "bliss-sky": "#b8d8f5"},
+        window_gradient=("#b8d8f5", "#ece9d8"),
+        accent="#0054e3",               # XP blue: white text clears AA
+        accent2="#21427b",              # XP navy: placeholder must read
+        panel_bg="#ece9d8",             # the XP window face
+        panel_text="#000000",
+        text_on_accent="#ffffff",
+        status_bg="rgba(255, 255, 255, 0.45)",
+        status_text="#21427b",
+        header_gradient=("#0054e3", "#1b6cd6"),   # the Luna titlebar
+        header_text="#ffffff",
+        category="Retro Aesthetics",
+    )
+
+
 def aero_at_night() -> Theme:
     """Aero at Night: Frutiger Aero's aqua sunk into a deep-teal night.
 
@@ -1887,6 +1914,7 @@ THEMES: list[Theme] = [
     dark_aqua(),
     human(),
     human_dark(),
+    xp_memories(),
     # ATLA
     water_tribe(),
     last_agni_kai(),
