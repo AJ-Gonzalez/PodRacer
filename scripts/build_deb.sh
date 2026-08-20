@@ -16,9 +16,19 @@ VERSION="$(python3 -c \
 PKG="podracer_${VERSION}_${ARCH}"
 
 ROOT="$(mktemp -d)"
-mkdir -p "$ROOT/usr/bin" "$ROOT/DEBIAN"
+mkdir -p "$ROOT/usr/bin" \
+         "$ROOT/usr/share/applications" \
+         "$ROOT/usr/share/metainfo" \
+         "$ROOT/usr/share/icons/hicolor/256x256/apps" \
+         "$ROOT/DEBIAN"
 cp "./$BIN" "$ROOT/usr/bin/podracer"
 chmod 755 "$ROOT/usr/bin/podracer"
+cp packaging/io.github.ajgonzalez.PodRacer.desktop \
+   "$ROOT/usr/share/applications/io.github.ajgonzalez.PodRacer.desktop"
+cp packaging/io.github.ajgonzalez.PodRacer.appdata.xml \
+   "$ROOT/usr/share/metainfo/io.github.ajgonzalez.PodRacer.appdata.xml"
+cp src/podracer/assets/podracer_icon.png \
+   "$ROOT/usr/share/icons/hicolor/256x256/apps/io.github.ajgonzalez.PodRacer.png"
 cat > "$ROOT/DEBIAN/control" <<EOF
 Package: podracer
 Version: $VERSION
