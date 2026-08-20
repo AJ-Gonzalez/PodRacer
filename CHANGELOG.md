@@ -10,6 +10,7 @@ heading, so an optional nickname in quotes lands in the title.
 - File browser: "Set as top-level folder" on the folder right-click menu roots the pane there for the session only — the saved default music folder is untouched.
 - Demo mode: the sample music tree now contains real (silent, tagged) audio instead of empty placeholders, so drag-and-drop, add, and sync are demonstrable end-to-end (including duplicate detection on re-drop).
 - Library: all four columns (Title/Artist/Album/Time) are now user-resizable like the left pane. Defaults are proportional — Title/Artist/Album 30% each, Time 10% of the pane width, tracked across window resizes until you drag a column — and both panes' column widths persist across launches. Appearance menu gains "Reset column widths" to restore the defaults and clear the saved layout.
+- Two new themes: Human (Ubuntu 8.04 Hardy Heron's default — warm beige/brown, palette taken from the shipped human-theme gtkrc) and Aero at Night (Frutiger Aero's aqua on a deep-teal night). Both WCAG AA verified.
 
 ## [1.2.1] - 2026-08-19 "Headlong"
 

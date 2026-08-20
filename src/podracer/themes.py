@@ -678,6 +678,71 @@ def dark_aqua() -> Theme:
     )
 
 
+def human() -> Theme:
+    """Human: Ubuntu 8.04 Hardy Heron's default theme.
+
+    Palette taken from the shipped human-theme 0.39.2 (the last Hardy
+    update) gtkrc gtk_color_scheme: fg #101010 / bg #e6ddd5 (warm
+    beige) / base #ffffff / text #1a1a1a / selected_bg #8f5f4a (the
+    brown selection) / tooltip #f5f5b5. The metacity titlebar shades
+    derive from the same brown, so header and gradient use it. The
+    theme itself carries no orange — that lived in the wallpaper.
+    """
+    return Theme(
+        name="Human",
+        colors={
+            "human-fg": "#101010",
+            "human-bg": "#e6ddd5",
+            "human-base": "#ffffff",
+            "human-text": "#1a1a1a",
+            "human-selected": "#8f5f4a",
+            "human-tooltip": "#f5f5b5",
+        },
+        window_gradient=("#8f5f4a", "#e6ddd5"),
+        accent="#8f5f4a",               # brown: white text clears AA (5.4:1)
+        accent2="#8f5f4a",              # same brown reads as placeholder
+        panel_bg="#ffffff",             # Human base
+        panel_text="#101010",           # Human fg
+        text_on_accent="#ffffff",
+        status_bg="rgba(70, 44, 28, 0.40)",   # brown haze over the sweep
+        status_text="#ffffff",
+        header_gradient=("#8f5f4a", "#6e4a3a"),
+        header_text="#ffffff",
+    )
+
+
+def aero_at_night() -> Theme:
+    """Aero at Night: Frutiger Aero's aqua sunk into a deep-teal night.
+
+    Same teal/cyan family as Frutiger Aero, on the dark side: the
+    abyss/deepwater shades carry the backdrop, mist text on a
+    near-black teal panel, spray cyan as the placeholder/focus.
+    """
+    return Theme(
+        name="Aero at Night",
+        colors={
+            "lagoon": "#0e7490",
+            "reef": "#0b7a8f",
+            "surge": "#0891b2",
+            "spray": "#22d3ee",
+            "mist": "#eef9ff",
+            "abyss": "#0b3a4a",
+            "deepwater": "#083344",
+        },
+        window_gradient=("#0b3a4a", "#05222d"),
+        accent="#0b7a8f",               # reef: white text clears AA (5.0:1)
+        accent2="#22d3ee",              # spray: reads on the dark panel
+        panel_bg="#0b232b",             # near-black teal slate
+        panel_text="#eef9ff",           # mist
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#eef9ff",
+        header_gradient=("#0e7490", "#0b3a4a"),
+        header_text="#ffffff",
+        button_to="#096475",            # glossy dark-teal second stop
+    )
+
+
 def just_blues() -> Theme:
     """Just Blues: periwinkle light with a deep-blue accent (palette
     e3e8f8 / c0c5cd / 3e588f / 203562, colorhunt.co)."""
@@ -1358,6 +1423,7 @@ THEMES: list[Theme] = [
     analog_sunrise(),
     insane_default(),
     frutiger_aero(),
+    aero_at_night(),
     aqua(),
     dark_aqua(),
     just_blues(),
@@ -1384,6 +1450,7 @@ THEMES: list[Theme] = [
     dusk_flat(),
     flat_earth(),
     naan_binary(),
+    human(),
 ]
 
 
