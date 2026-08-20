@@ -636,6 +636,7 @@ class MainWindow(QMainWindow):
             menu_tint = THEMES[0].panel_text
 
         theme_menu = self.appearance_menu.addMenu("Theme")
+        theme_menu.setIcon(tinted_icon("palette", menu_tint))
         for theme in THEMES:
             action = theme_menu.addAction(theme_label(theme))
             action.setIcon(tinted_icon(

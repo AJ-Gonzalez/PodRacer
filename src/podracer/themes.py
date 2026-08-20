@@ -261,8 +261,13 @@ def is_dark(theme: Theme) -> bool:
 
 
 def theme_label(theme: Theme) -> str:
-    """Menu text: name plus the dark/light lean, e.g. 'Grey Moonlight (Dark)'."""
-    return f"{theme.name} ({'Dark' if is_dark(theme) else 'Light'})"
+    """Menu text: name plus the dark/light lean, e.g. 'Grey Moonlight (Dark)'.
+
+    The tab is Qt's menu shortcut-column marker: QMenu right-aligns
+    everything after it, so the (Dark)/(Light) sits flush right while
+    the name and moon/sun icon stay left.
+    """
+    return f"{theme.name}\t({'Dark' if is_dark(theme) else 'Light'})"
 
 
 def resolved_pressed(theme: Theme) -> str:
@@ -1067,6 +1072,57 @@ def air_nomad() -> Theme:
     )
 
 
+def blue_office() -> Theme:
+    """Blue Office: light office-slate blues.
+
+    Palette as given (#f1f6f9 #394867 #212a3e #9ba4b5). Pale-ice
+    panels carry navy text; slate-blue accent with white text. The
+    gray-blue #9ba4b5 is too pale for the placeholder, so accent2 runs
+    a darkened slate (#5c6a83) that reads.
+    """
+    return Theme(
+        name="Blue Office",
+        colors={"ice": "#f1f6f9", "slate": "#394867",
+                "navy": "#212a3e", "gray-blue": "#9ba4b5"},
+        window_gradient=("#f1f6f9", "#e2e9f3"),
+        accent="#394867",
+        accent2="#5c6a83",              # gray-blue darkened: placeholder must read
+        panel_bg="#f1f6f9",
+        panel_text="#212a3e",           # navy
+        text_on_accent="#ffffff",
+        status_bg="rgba(255, 255, 255, 0.35)",
+        status_text="#212a3e",
+        header_gradient=("#394867", "#212a3e"),
+        header_text="#ffffff",
+    )
+
+
+def beige_flag() -> Theme:
+    """Beige Flag: light cream/beige monochrome.
+
+    Palette as given (#f9f8f6 #efe9e3 #d9cfc7 #c9b59c). Cream panels
+    carry a derived warm-dark body text (no dark color in the palette);
+    the tan #c9b59c is the accent with warm-dark text. The mid beige
+    #d9cfc7 is too pale for the placeholder, so accent2 runs a darker
+    tan (#7e6b54) that reads.
+    """
+    return Theme(
+        name="Beige Flag",
+        colors={"cream": "#f9f8f6", "beige": "#efe9e3",
+                "mid": "#d9cfc7", "tan": "#c9b59c"},
+        window_gradient=("#f9f8f6", "#efe9e3"),
+        accent="#c9b59c",
+        accent2="#7e6b54",              # mid beige darkened: placeholder must read
+        panel_bg="#f9f8f6",
+        panel_text="#453a2e",           # derived warm dark
+        text_on_accent="#3f362c",       # derived warm dark
+        status_bg="rgba(0, 0, 0, 0.08)",
+        status_text="#453a2e",
+        header_gradient=("#d9cfc7", "#c9b59c"),
+        header_text="#3f362c",
+    )
+
+
 def i_know_kung_fu() -> Theme:
     """I know Kung Fu: green monochrome terminal, Matrix phosphor.
 
@@ -1175,6 +1231,8 @@ THEMES: list[Theme] = [
     i_know_kung_fu(),
     my_name_is_neo(),
     give_me_the_night(),
+    blue_office(),
+    beige_flag(),
 ]
 
 
