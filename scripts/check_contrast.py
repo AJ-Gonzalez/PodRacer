@@ -3,12 +3,9 @@
 
 Every text pair a theme renders must clear 4.5:1 (body text, text on
 accent/selection, status on the backdrop, header on both gradient
-stops, pressed/checked, and the button gradient stop). Derived states
-are checked through the same resolvers the QSS uses.
-
-The placeholder color (accent2) is reported as a WARNING: it is not
-AA-required yet because 21 shipped themes predate it. It does not
-affect the exit code.
+stops, pressed/checked, the button gradient stop, and the placeholder
+color accent2 on the panel). Derived states are checked through the
+same resolvers the QSS uses.
 
 Usage:
     python3 scripts/check_contrast.py                 # all themes
@@ -32,7 +29,6 @@ from podracer.themes import (  # noqa: E402
     THEMES,
     Theme,
     contrast_checks,
-    placeholder_ratio,
     theme_by_name,
 )
 
@@ -54,14 +50,7 @@ def check(theme: Theme) -> dict[str, object]:
             "ratio": round(ratio, 2),
             "pass": ratio >= MIN_RATIO,
         })
-    placeholder = {
-        "pair": "placeholder (accent2)",
-        "foreground": theme.accent2,
-        "background": theme.panel_bg,
-        "ratio": round(placeholder_ratio(theme), 2),
-        "pass": placeholder_ratio(theme) >= MIN_RATIO,
-    }
-    return {"theme": theme.name, "checks": results, "placeholder": placeholder}
+    return {"theme": theme.name, "checks": results}
 
 
 def main() -> int:
@@ -79,14 +68,12 @@ def main() -> int:
 
     reports = [check(t) for t in themes]
     failures = [r for r in reports if not all(c["pass"] for c in r["checks"])]
-    warnings = [r for r in reports if not r["placeholder"]["pass"]]
 
     if args.json:
         print(json.dumps({
             "min_ratio": MIN_RATIO,
             "themes": reports,
             "aa_failures": [r["theme"] for r in failures],
-            "placeholder_warnings": [r["theme"] for r in warnings],
         }, indent=2))
     else:
         for r in reports:
@@ -96,20 +83,13 @@ def main() -> int:
                 mark = "ok " if c["pass"] else "FAIL"
                 print(f"    {mark} {c['pair']:<22} {c['ratio']:5.2f}:1  "
                       f"{c['foreground']} on {c['background']}")
-            if not r["placeholder"]["pass"]:
-                print(f"    warn placeholder (accent2) "
-                      f"{r['placeholder']['ratio']:5.2f}:1  "
-                      f"(not AA-required yet)")
         print()
         if failures:
             print(f"{len(failures)} theme(s) FAIL AA:")
             for r in failures:
                 print(f"  - {r['theme']}")
             return 1
-        summary = (f"All {len(reports)} theme(s) pass WCAG-AA.  "
-                   f"{len(warnings)} theme(s) have sub-AA placeholder "
-                   f"warning(s).")
-        print(summary)
+        print(f"All {len(reports)} theme(s) pass WCAG-AA.")
         return 0
 
 

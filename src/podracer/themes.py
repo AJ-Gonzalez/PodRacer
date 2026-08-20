@@ -298,7 +298,10 @@ def contrast_checks(theme: Theme) -> list[tuple[str, str, str, float]]:
     Single source of truth for the test suite and
     scripts/check_contrast.py, so the two can never drift apart.
     Derived states (pressed/checked, button gradient) are checked via
-    the same resolvers the QSS emits.
+    the same resolvers the QSS emits. accent2 doubles as the
+    placeholder text color, so it is a required pair too (2026-08-19:
+    every theme's accent2 was brought to >= 4.5 and this became
+    AA-enforced).
     """
     pressed = resolved_pressed(theme)
     button_to = resolved_button_to(theme)
@@ -317,17 +320,9 @@ def contrast_checks(theme: Theme) -> list[tuple[str, str, str, float]]:
          contrast_ratio(theme.text_on_accent, pressed)),
         ("button gradient stop", theme.text_on_accent, button_to,
          contrast_ratio(theme.text_on_accent, button_to)),
+        ("placeholder (accent2)", theme.accent2, theme.panel_bg,
+         contrast_ratio(theme.accent2, theme.panel_bg)),
     ]
-
-
-def placeholder_ratio(theme: Theme) -> float:
-    """Contrast of the placeholder color (accent2) on the panel.
-
-    Not AA-required by the test suite yet: 21 shipped themes predate
-    the check (their accent2 was chosen as a border/link color, not a
-    text color), so the checker reports it as a warning, not a failure.
-    """
-    return contrast_ratio(theme.accent2, theme.panel_bg)
 
 
 def magenta_daydream() -> Theme:
@@ -352,7 +347,7 @@ def magenta_daydream() -> Theme:
         },
         window_gradient=("#b7094c", "#0091ad"),
         accent="#b7094c",
-        accent2="#1780a1",
+        accent2="#136a86",             # readable placeholder (AA on panel)
         panel_bg="#fdf6fa",
         panel_text="#2b1420",
         header_gradient=("#723c70", "#455e89"),
@@ -382,7 +377,7 @@ def grey_moonlight() -> Theme:
         },
         window_gradient=("#131316", "#2f3037"),
         accent="#5b5c62",              # charcoal-2: white text clears AA
-        accent2="#6a6b70",             # dim-grey
+        accent2="#88898e",             # lightened: placeholder must read
         panel_bg="#1c1c21",            # shadow-grey
         panel_text="#e9e9ee",          # derived: no light color in palette
         text_on_accent="#ffffff",
@@ -412,7 +407,7 @@ def zen_garden() -> Theme:
         },
         window_gradient=("#8fa28a", "#c7d3c0"),
         accent="#c8a96b",               # sand: dark text clears AA
-        accent2="#8fa28a",              # sage
+        accent2="#61735c",              # sage darkened: placeholder must read
         panel_bg="#f7f4ed",             # cream
         panel_text="#3a382f",           # derived dark-warm
         text_on_accent="#33302a",       # derived dark-warm
@@ -441,7 +436,7 @@ def bubblegum_haze() -> Theme:
         },
         window_gradient=("#ff9d9d", "#bbf1d2"),
         accent="#ff9d9d",               # coral: dark text clears AA
-        accent2="#cc7e7e",              # derived deeper coral for focus
+        accent2="#aa4343",              # derived deeper coral: placeholder must read
         panel_bg="#eef8cd",             # pale lime
         panel_text="#383d2e",           # derived dark-warm olive
         text_on_accent="#40262a",       # derived dark-warm
@@ -470,7 +465,7 @@ def hide_and_seek() -> Theme:
         },
         window_gradient=("#89a8b2", "#b3c8cf"),
         accent="#5d7279",               # derived deeper steel: white text
-        accent2="#89a8b2",              # steel-blue focus borders
+        accent2="#4c6a74",              # steel darkened: placeholder must read
         panel_bg="#f1f0e8",             # IKEA off-white
         panel_text="#2f3233",           # derived dark warm-grey
         text_on_accent="#ffffff",
@@ -499,7 +494,7 @@ def lipstick_hyperfemme() -> Theme:
         },
         window_gradient=("#ff78c4", "#e1aeff"),
         accent="#ff78c4",               # hot pink: dark text clears AA
-        accent2="#e1aeff",              # lavender
+        accent2="#7b5f8c",              # lavender-plum: placeholder must read
         panel_bg="#ffecec",             # pale pink
         panel_text="#3a1f33",           # derived dark plum
         text_on_accent="#3a1f33",
@@ -558,7 +553,7 @@ def analog_sunrise() -> Theme:
         },
         window_gradient=("#273f4f", "#447d9b"),
         accent="#fe7743",               # sunset orange: dark text
-        accent2="#447d9b",              # slate-blue focus
+        accent2="#315a70",              # slate-blue darkened: placeholder must read
         panel_bg="#d7d7d7",             # light grey
         panel_text="#22282e",           # derived cool dark slate
         text_on_accent="#2b2118",       # derived warm dark
@@ -616,7 +611,7 @@ def frutiger_aero() -> Theme:
         },
         window_gradient=("#0e7490", "#22d3ee"),
         accent="#0b7a8f",               # reef: white text clears AA
-        accent2="#0891b2",              # surge: focus/borders
+        accent2="#067994",              # surge darkened: placeholder must read
         panel_bg="#eef9ff",             # mist
         panel_text="#0b3a4a",           # abyss
         text_on_accent="#ffffff",
@@ -644,7 +639,7 @@ def aqua() -> Theme:
         },
         window_gradient=("#7f9fc9", "#dfeaf7"),
         accent="#2e6db4",               # aqua blue: white text clears AA
-        accent2="#3b7dd8",              # sky: focus/borders
+        accent2="#286dcb",              # sky darkened: placeholder must read
         panel_bg="#f4f6f9",             # cloud
         panel_text="#1c2733",           # ink
         text_on_accent="#ffffff",
@@ -671,7 +666,7 @@ def dark_aqua() -> Theme:
         },
         window_gradient=("#152238", "#2b4a6f"),
         accent="#2e6db4",               # aqua blue: white text clears AA
-        accent2="#3b7dd8",              # sky: focus/borders
+        accent2="#6e9ee2",              # sky lightened: placeholder must read
         panel_bg="#1c2733",             # slate
         panel_text="#dbe7f5",           # ice
         text_on_accent="#ffffff",
@@ -749,7 +744,7 @@ def minty_forest() -> Theme:
         },
         window_gradient=("#89d7b7", "#428475"),
         accent="#1a312c",               # forest: white text clears AA
-        accent2="#428475",              # teal: focus/borders
+        accent2="#376f62",              # teal darkened: placeholder must read
         panel_bg="#fff4e1",             # cream
         panel_text="#1a312c",           # forest
         text_on_accent="#ffffff",
@@ -779,7 +774,7 @@ def stoner_shore() -> Theme:
         },
         window_gradient=("#35495e", "#347474"),
         accent="#63b7af",               # sea glass: dark text
-        accent2="#ee8572",              # salmon: focus/borders
+        accent2="#f19c8d",              # salmon lightened: placeholder must read
         panel_bg="#2d3d4e",             # derived deeper slate
         panel_text="#eef3f6",           # derived near-white
         text_on_accent="#173a3d",       # derived deep sea
@@ -809,7 +804,7 @@ def carmillas_snack() -> Theme:
         },
         window_gradient=("#851a1a", "#410001"),
         accent="#851a1a",               # claret: white text clears AA
-        accent2="#7e0d0e",              # crimson-dark: focus/borders
+        accent2="#ef6768",              # blood red lightened: placeholder must read
         panel_bg="#590001",             # wine-dark
         panel_text="#ffd9d9",           # derived pale rose
         text_on_accent="#ffffff",
@@ -839,7 +834,7 @@ def sakura_light() -> Theme:
         },
         window_gradient=("#efd0e5", "#daabcb"),
         accent="#d29ec2",               # blossom-deep: dark plum text
-        accent2="#be7fab",              # twig: focus/borders
+        accent2="#81416d",              # twig darkened: placeholder must read
         panel_bg="#efd0e5",             # petal-light
         panel_text="#3a1f2e",           # derived plum
         text_on_accent="#2b1420",       # derived deep plum
@@ -868,7 +863,7 @@ def black_velvet() -> Theme:
         },
         window_gradient=("#1e1c1c", "#610536"),
         accent="#64285d",               # plum: white text clears AA
-        accent2="#610536",              # wine: focus/borders
+        accent2="#b0829a",              # plum lightened: placeholder must read
         panel_bg="#1e1c1c",             # velvet
         panel_text="#e7e1d4",           # bone
         text_on_accent="#ffffff",
@@ -897,7 +892,7 @@ def atom_blue() -> Theme:
         },
         window_gradient=("#282c34", "#636d83"),
         accent="#528bff",               # accent blue: dark navy text
-        accent2="#636d83",              # gutter: focus/borders
+        accent2="#939bad",              # gutter lightened: placeholder must read
         panel_bg="#282c34",             # syntax-bg
         panel_text="#abb2bf",           # syntax-fg
         text_on_accent="#0b1a38",       # derived dark navy
@@ -926,7 +921,7 @@ def atom_lilac() -> Theme:
         },
         window_gradient=("#282c34", "#32363e"),
         accent="#c678dd",               # lilac: deep violet text
-        accent2="#5c6370",              # comment grey: focus/borders
+        accent2="#9aa0ac",              # comment lightened: placeholder must read
         panel_bg="#282c34",             # syntax-bg
         panel_text="#abb2bf",           # syntax-fg
         text_on_accent="#1a0f24",       # derived deep violet
@@ -955,7 +950,7 @@ def coffee_shop() -> Theme:
         },
         window_gradient=("#382c28", "#605653"),
         accent="#605653",               # mocha: white text clears AA
-        accent2="#88807e",              # latte: focus/borders
+        accent2="#a59f9d",              # latte lightened: placeholder must read
         panel_bg="#382c28",             # espresso
         panel_text="#d7d5d4",           # cream
         text_on_accent="#ffffff",
@@ -985,7 +980,7 @@ def water_tribe() -> Theme:
         },
         window_gradient=("#f2f2fa", "#b1bbc8"),
         accent="#2a4d88",               # deep ocean: white text clears AA
-        accent2="#7c94b8",              # wave: focus/borders
+        accent2="#4b658c",              # wave darkened: placeholder must read
         panel_bg="#f2f2fa",             # foam white
         panel_text="#2a4d88",           # deep ocean
         text_on_accent="#ffffff",
@@ -1015,7 +1010,7 @@ def last_agni_kai() -> Theme:
         },
         window_gradient=("#8a6665", "#005e88"),
         accent="#e25822",               # flame: dark text clears AA
-        accent2="#005e88",              # blue flame: focus/borders
+        accent2="#bbeaff",              # ice blue lightened: placeholder must read
         panel_bg="#596478",             # slate
         panel_text="#f0e8e4",           # derived warm white
         text_on_accent="#2b0e04",       # derived near-black ember
@@ -1102,7 +1097,7 @@ def air_nomad() -> Theme:
         },
         window_gradient=("#b3edfe", "#93c6ef"),
         accent="#65a7de",               # sky ink: dark navy text clears AA
-        accent2="#9cd0f9",              # sky soft: focus/borders
+        accent2="#3e5363",              # sky navy: placeholder must read
         panel_bg="#b3edfe",             # sky pale
         panel_text="#1a3a5c",           # derived deep navy
         text_on_accent="#0d2b45",       # derived darkest navy
