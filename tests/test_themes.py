@@ -90,6 +90,11 @@ class PaletteTests(unittest.TestCase):
              "Earth Kingdom", "Air Nomad", "Si Wong Desert"},
         )
         self.assertEqual(
+            by_category["Psychonaut"],
+            {"Magenta Daydream", "Analog Sunrise", "Stoner Shore",
+             "Give me the night"},
+        )
+        self.assertEqual(
             by_category["Computery Stuff"],
             {"I know Kung Fu", "My name is Neo", "Solarized Dark"},
         )
@@ -129,9 +134,13 @@ class ApplyThemeTests(unittest.TestCase):
     def test_disabled_button_is_visible(self):
         # The disabled state must stay readable on any background:
         # accent-tinted fill with faded accent text (not white-on-white).
-        qss = THEMES[0].qss()
-        self.assertIn("rgba(183, 9, 76, 0.35)", qss)   # accent fill
-        self.assertIn("rgba(255, 255, 255, 0.6)", qss)  # faded text
+        # Derive the expected colors from the theme so the test tracks
+        # whatever theme leads the registry.
+        from podracer.themes import rgba_of
+        theme = THEMES[0]
+        qss = theme.qss()
+        self.assertIn(rgba_of(theme.accent, 0.35), qss)      # accent fill
+        self.assertIn(rgba_of(theme.text_on_accent, 0.6), qss)  # faded text
 
 
 if __name__ == "__main__":

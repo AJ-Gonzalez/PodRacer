@@ -355,6 +355,7 @@ def magenta_daydream() -> Theme:
         header_gradient=("#723c70", "#455e89"),
         button_to="#a01a58",           # dark-raspberry, the original pair
         button_pressed="#892b64",      # royal-plum
+        category="Psychonaut",
     )
 
 
@@ -595,6 +596,7 @@ def analog_sunrise() -> Theme:
         status_text="#e8eaec",          # derived near-white
         header_gradient=("#fe7743", "#6997af"),   # the sunrise (2nd stop lightened: dark text must read on the blue)
         header_text="#2b2118",
+        category="Psychonaut",
     )
 
 
@@ -1009,6 +1011,7 @@ def stoner_shore() -> Theme:
         status_text="#eef3f6",
         header_gradient=("#ee8572", "#63b7af"),   # the surf
         header_text="#173a3d",
+        category="Psychonaut",
     )
 
 
@@ -1733,36 +1736,38 @@ def give_me_the_night() -> Theme:
         status_text="#d9a8c3",
         header_gradient=("#3b1c32", "#6a1e55"),
         header_text="#ffffff",
+        category="Psychonaut",
     )
 
 
 # Registry order is menu order, grouped by category so the menu's
-# category headers appear exactly once, contiguously: Classic, Retro
-# Aesthetics, ATLA, Computery Stuff, Flat.
+# category headers appear exactly once, contiguously: Classic,
+# Psychonaut, Retro Aesthetics, ATLA, Computery Stuff, Flat.
 THEMES: list[Theme] = [
     # Classic
-    magenta_daydream(),
     grey_moonlight(),
     zen_garden(),
     bubblegum_haze(),
     hide_and_seek(),
     lipstick_hyperfemme(),
     butch_cassidy(),
-    analog_sunrise(),
     insane_default(),
     just_blues(),
     lilac_love(),
     minty_forest(),
-    stoner_shore(),
     carmillas_snack(),
     sakura_light(),
     black_velvet(),
     atom_blue(),
     atom_lilac(),
     coffee_shop(),
-    give_me_the_night(),
     blue_office(),
     beige_flag(),
+    # Psychonaut
+    magenta_daydream(),
+    analog_sunrise(),
+    stoner_shore(),
+    give_me_the_night(),
     # Retro Aesthetics
     frutiger_aero(),
     aero_at_night(),
