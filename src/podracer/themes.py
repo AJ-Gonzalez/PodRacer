@@ -907,6 +907,32 @@ def xp_memories() -> Theme:
     )
 
 
+def mac_os_9() -> Theme:
+    """Mac OS 9: the Platinum design language, pre-Aqua.
+
+    The Platinum chrome: light-gray #ececec window face with black
+    text, the dark-gray #000080-navy Finder selection/buttons (white
+    text), and a gray header evoking the iconic striped titlebar.
+    """
+    return Theme(
+        name="Mac OS 9",
+        colors={"face": "#ececec", "light": "#e8e8e8", "mid": "#d0d0d0",
+                "dark-gray": "#b0b0b0", "navy": "#000080",
+                "black": "#000000"},
+        window_gradient=("#e8e8e8", "#d0d0d0"),
+        accent="#000080",               # platinum navy: white text clears AA
+        accent2="#000080",              # navy: placeholder must read
+        panel_bg="#ececec",             # the platinum face
+        panel_text="#000000",
+        text_on_accent="#ffffff",
+        status_bg="rgba(255, 255, 255, 0.40)",
+        status_text="#000000",
+        header_gradient=("#d8d8d8", "#b0b0b0"),   # evoking the striped titlebar
+        header_text="#000000",
+        category="Retro Aesthetics",
+    )
+
+
 def aero_at_night() -> Theme:
     """Aero at Night: Frutiger Aero's aqua sunk into a deep-teal night.
 
@@ -2012,6 +2038,7 @@ THEMES: list[Theme] = [
     human(),
     human_dark(),
     xp_memories(),
+    mac_os_9(),
     # ATLA
     water_tribe(),
     last_agni_kai(),

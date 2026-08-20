@@ -105,7 +105,7 @@ class PaletteTests(unittest.TestCase):
             by_category["Retro Aesthetics"],
             {"Frutiger Aero", "Aero at Night", "Aqua", "Aqua-pilled",
              "Dark Aqua", "Aqua-Pilled Dark", "Human", "Human Dark",
-             "XP Memories"},
+             "XP Memories", "Mac OS 9"},
         )
         self.assertIn("Mint at Night", by_category["Flat"])
         self.assertNotIn("Naan Binary", by_category["Flat"])
