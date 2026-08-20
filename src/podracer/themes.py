@@ -1626,6 +1626,34 @@ def hip_to_be_square() -> Theme:
     )
 
 
+def windows_95() -> Theme:
+    """Windows 95: the classic face, flat.
+
+    The Win95 chrome: #c0c0c0 button-face panels with black text,
+    navy #000080 titlebar/selection, the teal #008080 desktop as the
+    backdrop (white status text clears it at 4.8:1). Flat: identical
+    gradient stops, flat navy button, square corners.
+    """
+    return Theme(
+        name="Windows 95",
+        colors={"face": "#c0c0c0", "navy": "#000080",
+                "teal": "#008080", "black": "#000000"},
+        window_gradient=("#008080", "#008080"),   # flat teal desktop
+        accent="#000080",               # navy: white text clears AA
+        accent2="#000080",              # navy: placeholder must read
+        panel_bg="#c0c0c0",             # the button face
+        panel_text="#000000",
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.25)",
+        status_text="#ffffff",
+        header_gradient=("#000080", "#000080"),   # flat navy titlebar
+        header_text="#ffffff",
+        button_to="#000080",            # same as accent: flat button
+        category="Flat",
+        button_radius=0,
+    )
+
+
 def naan_binary() -> Theme:
     """Naan Binary: the non-binary flag, dark.
 
@@ -1941,6 +1969,7 @@ THEMES: list[Theme] = [
     square_rooms(),
     hip_to_be_square(),
     tokyo_night_2d(),
+    windows_95(),
 ]
 
 

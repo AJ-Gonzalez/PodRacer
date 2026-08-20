@@ -715,16 +715,13 @@ class MainWindow(QMainWindow):
         theme_menu.addSeparator()
         last_category = None
         for theme in THEMES:
-            # Category headers are disabled labels, never theme actions:
+            # One submenu per category (Classic, Psychonaut, ...). The
+            # submenus are plain menus, never theme actions:
             # _theme_actions stays exactly the theme list for the tests.
             if theme.category != last_category:
-                header = theme_menu.addAction(theme.category)
-                header.setEnabled(False)
-                font = header.font()
-                font.setBold(True)
-                header.setFont(font)
+                category_menu = theme_menu.addMenu(theme.category)
                 last_category = theme.category
-            action = theme_menu.addAction(theme_label(theme))
+            action = category_menu.addAction(theme_label(theme))
             action.setIcon(menu_icon(
                 "moon" if is_dark(theme) else "sun",
                 panel_text, accent_text,
