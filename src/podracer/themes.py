@@ -537,6 +537,38 @@ def butch_cassidy() -> Theme:
     )
 
 
+def bought_a_binder() -> Theme:
+    """Bought a Binder: the Butch Cassidy palette, flat.
+
+    Same dark charcoal-plum and rosewood accent, flattened: solid
+    dark-plum backdrop, solid rosewood header, flat rosewood button.
+    """
+    return Theme(
+        name="Bought a Binder",
+        colors={
+            "charcoal": "#37353e",
+            "dark-plum": "#44444e",
+            "rosewood": "#715a5a",
+            "pale-sage": "#d3dad9",
+        },
+        window_gradient=("#44444e", "#44444e"),   # flat
+        accent="#715a5a",               # rosewood: white text clears AA
+        accent2="#d3dad9",              # pale sage-grey
+        panel_bg="#44444e",             # dark-plum
+        panel_text="#e8e6e2",           # derived warm light grey
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#e8e6e2",
+        header_gradient=("#715a5a", "#715a5a"),   # flat rosewood
+        header_text="#ffffff",
+        hover_tint="rgba(113, 90, 90, 0.35)",      # rosewood wash
+        alternate_tint="rgba(255, 255, 255, 0.04)",
+        button_to="#715a5a",            # same as accent: flat button
+        category="Flat",
+        button_radius=0,
+    )
+
+
 def analog_sunrise() -> Theme:
     """Analog Sunrise: sunset orange over deep slate.
 
@@ -745,6 +777,36 @@ def human_dark() -> Theme:
         header_gradient=("#c13d11", "#9e310e"),   # the orange titlebar
         header_text="#ffffff",
         category="Retro Aesthetics",
+    )
+
+
+def square_rooms() -> Theme:
+    """Square Rooms: the Human Dark palette, flat.
+
+    Same dark-brown panels and Ubuntu orange, flattened: solid brown
+    backdrop, solid orange titlebar, flat orange button.
+    """
+    return Theme(
+        name="Square Rooms",
+        colors={
+            "human-fg": "#101010",
+            "human-bg": "#e6ddd5",
+            "human-selected": "#8f5f4a",
+            "ubuntu-orange": "#dd4814",
+        },
+        window_gradient=("#241a12", "#241a12"),   # flat
+        accent="#c13d11",               # ubuntu orange darkened: white clears AA
+        accent2="#e8a87c",              # warm peach: placeholder must read
+        panel_bg="#241a12",             # near-black brown
+        panel_text="#f0e6dc",           # warm tan
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#f0e6dc",
+        header_gradient=("#c13d11", "#c13d11"),   # flat orange titlebar
+        header_text="#ffffff",
+        button_to="#c13d11",            # same as accent: flat button
+        category="Flat",
+        button_radius=0,
     )
 
 
@@ -1504,6 +1566,35 @@ def machine_in_motion() -> Theme:
     )
 
 
+def hip_to_be_square() -> Theme:
+    """Hip to be Square: muted American Beauty/Psycho palette, flat.
+
+    Palette as given (american beauty - american psycho,
+    color-hex #d7cba2 #d4cfc1 #6d6e8e #343030 #577655). Pale taupe
+    panels carry charcoal text; the muted green is the accent with
+    white text; a darkened slate carries focus/placeholder. Flat:
+    identical gradient stops, button_to==accent, square buttons.
+    """
+    return Theme(
+        name="Hip to be Square",
+        colors={"sand": "#d7cba2", "taupe": "#d4cfc1", "slate": "#6d6e8e",
+                "charcoal": "#343030", "muted-green": "#577655"},
+        window_gradient=("#d4cfc1", "#d4cfc1"),   # flat
+        accent="#577655",               # muted green: white text clears AA
+        accent2="#4c4d66",              # slate darkened: placeholder must read
+        panel_bg="#d4cfc1",             # taupe
+        panel_text="#343030",           # charcoal
+        text_on_accent="#ffffff",
+        status_bg="rgba(255, 255, 255, 0.40)",
+        status_text="#343030",
+        header_gradient=("#6d6e8e", "#6d6e8e"),   # flat slate bar
+        header_text="#ffffff",
+        button_to="#577655",            # same as accent: flat button
+        category="Flat",
+        button_radius=0,
+    )
+
+
 def naan_binary() -> Theme:
     """Naan Binary: the non-binary flag, dark.
 
@@ -1698,6 +1789,9 @@ THEMES: list[Theme] = [
     lilac_love_2d(),
     squished_forest(),
     machine_in_motion(),
+    bought_a_binder(),
+    square_rooms(),
+    hip_to_be_square(),
 ]
 
 
