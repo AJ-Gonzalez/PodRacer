@@ -8,11 +8,8 @@ from podracer.themes import (
     HIDDEN_THEMES,
     SYSTEM_THEME,
     THEMES,
-    Theme,
     apply_theme,
-    contrast_ratio,
-    resolved_button_to,
-    resolved_pressed,
+    contrast_checks,
     system_resolved_theme,
     theme_by_name,
 )
@@ -30,40 +27,14 @@ class PaletteTests(unittest.TestCase):
             ):
                 self.assertRegex(value, r"^#[0-9a-fA-F]{6}$", theme.name)
 
-    def test_body_text_contrast_aa(self):
-        # WCAG AA: body text needs >= 4.5:1 against its background.
-        for theme in THEMES:
-            self.assertGreaterEqual(
-                contrast_ratio(theme.panel_text, theme.panel_bg), 4.5, theme.name
-            )
-            self.assertGreaterEqual(
-                contrast_ratio(theme.text_on_accent, theme.accent), 4.5, theme.name
-            )
-            self.assertGreaterEqual(
-                contrast_ratio(theme.status_text, theme.window_gradient[0]), 4.5,
-                theme.name,
-            )
-
-    def test_pressed_and_header_contrast_aa(self):
-        # Derived states the base test misses: the checked/pressed
-        # background (darken of the accent) must still read against
-        # text_on_accent, and header text against both gradient stops.
-        for theme in THEMES:
-            self.assertGreaterEqual(
-                contrast_ratio(resolved_pressed(theme), theme.text_on_accent),
-                4.5,
-                f"{theme.name} pressed/checked",
-            )
-            self.assertGreaterEqual(
-                contrast_ratio(resolved_button_to(theme), theme.text_on_accent),
-                4.5,
-                f"{theme.name} button gradient stop",
-            )
-            for stop in theme.header_gradient:
+    def test_all_aa_pairs_pass(self):
+        # Every rendered text pair (incl. derived pressed/checked and
+        # the button gradient stop) must clear WCAG-AA. contrast_checks
+        # is the single source shared with scripts/check_contrast.py.
+        for theme in THEMES + HIDDEN_THEMES:
+            for label, _fg, _bg, ratio in contrast_checks(theme):
                 self.assertGreaterEqual(
-                    contrast_ratio(stop, theme.header_text),
-                    4.5,
-                    f"{theme.name} header {stop}",
+                    ratio, 4.5, f"{theme.name}: {label}"
                 )
 
     def test_theme_registry(self):
@@ -80,10 +51,10 @@ class PaletteTests(unittest.TestCase):
         resolved = system_resolved_theme()
         self.assertIn(resolved, THEMES + HIDDEN_THEMES)
 
-    def test_hidden_system_themes_are_flat_and_pass_contrast(self):
-        # The boring system themes are hidden from the menu but must
-        # hold the same contrast discipline as everything else, and
-        # identical gradient stops mean no sweeps anywhere.
+    def test_hidden_system_themes_are_flat(self):
+        # Identical gradient stops mean no sweeps anywhere. Their
+        # contrast is covered by test_all_aa_pairs_pass (which iterates
+        # THEMES + HIDDEN_THEMES).
         for theme in HIDDEN_THEMES:
             self.assertEqual(theme.window_gradient[0], theme.window_gradient[1],
                              f"{theme.name} window gradient")
@@ -91,21 +62,6 @@ class PaletteTests(unittest.TestCase):
                              f"{theme.name} header gradient")
             self.assertEqual(theme.button_to, theme.accent,
                              f"{theme.name} button flat")
-            self.assertGreaterEqual(
-                contrast_ratio(theme.panel_text, theme.panel_bg), 4.5, theme.name
-            )
-            self.assertGreaterEqual(
-                contrast_ratio(theme.text_on_accent, theme.accent), 4.5, theme.name
-            )
-            self.assertGreaterEqual(
-                contrast_ratio(resolved_pressed(theme), theme.text_on_accent),
-                4.5, f"{theme.name} pressed",
-            )
-            for stop in theme.header_gradient:
-                self.assertGreaterEqual(
-                    contrast_ratio(stop, theme.header_text), 4.5,
-                    f"{theme.name} header {stop}",
-                )
 
 
 class ApplyThemeTests(unittest.TestCase):

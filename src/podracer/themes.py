@@ -291,6 +291,45 @@ def resolved_button_to(theme: Theme) -> str:
     )
 
 
+def contrast_checks(theme: Theme) -> list[tuple[str, str, str, float]]:
+    """Every WCAG-AA text/background pair a theme must pass.
+
+    Each entry is (label, foreground, background, contrast_ratio).
+    Single source of truth for the test suite and
+    scripts/check_contrast.py, so the two can never drift apart.
+    Derived states (pressed/checked, button gradient) are checked via
+    the same resolvers the QSS emits.
+    """
+    pressed = resolved_pressed(theme)
+    button_to = resolved_button_to(theme)
+    return [
+        ("body text on panel", theme.panel_text, theme.panel_bg,
+         contrast_ratio(theme.panel_text, theme.panel_bg)),
+        ("text on accent", theme.text_on_accent, theme.accent,
+         contrast_ratio(theme.text_on_accent, theme.accent)),
+        ("status on backdrop", theme.status_text, theme.window_gradient[0],
+         contrast_ratio(theme.status_text, theme.window_gradient[0])),
+        ("header (top stop)", theme.header_text, theme.header_gradient[0],
+         contrast_ratio(theme.header_text, theme.header_gradient[0])),
+        ("header (bottom stop)", theme.header_text, theme.header_gradient[1],
+         contrast_ratio(theme.header_text, theme.header_gradient[1])),
+        ("pressed/checked", theme.text_on_accent, pressed,
+         contrast_ratio(theme.text_on_accent, pressed)),
+        ("button gradient stop", theme.text_on_accent, button_to,
+         contrast_ratio(theme.text_on_accent, button_to)),
+    ]
+
+
+def placeholder_ratio(theme: Theme) -> float:
+    """Contrast of the placeholder color (accent2) on the panel.
+
+    Not AA-required by the test suite yet: 21 shipped themes predate
+    the check (their accent2 was chosen as a border/link color, not a
+    text color), so the checker reports it as a warning, not a failure.
+    """
+    return contrast_ratio(theme.accent2, theme.panel_bg)
+
+
 def magenta_daydream() -> Theme:
     """Magenta Daydream: cherry-rose -> pacific-cyan sweep.
 
