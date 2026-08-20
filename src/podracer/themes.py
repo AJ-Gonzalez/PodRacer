@@ -831,6 +831,35 @@ def lilac_love() -> Theme:
     )
 
 
+def lilac_love_2d() -> Theme:
+    """Lilac Love 2D: the Lilac Love palette, flat.
+
+    Same deep-plum night and vivid-violet accent, with the sweeps and
+    glossy button flattened: identical gradient stops, button_to==accent.
+    """
+    return Theme(
+        name="Lilac Love 2D",
+        colors={
+            "deep-plum": "#2d033b",
+            "vivid-violet": "#810ca8",
+            "bright-lilac": "#c147e9",
+            "pale-lilac": "#e5b8f4",
+        },
+        window_gradient=("#2d033b", "#2d033b"),   # flat
+        accent="#810ca8",               # vivid violet: white clears AA
+        accent2="#c147e9",              # bright lilac: focus/borders
+        panel_bg="#2d033b",             # deep plum
+        panel_text="#e5b8f4",           # pale lilac
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#e5b8f4",
+        header_gradient=("#810ca8", "#810ca8"),   # flat violet
+        header_text="#ffffff",
+        button_to="#810ca8",            # same as accent: flat button
+        category="Flat",
+    )
+
+
 def minty_forest() -> Theme:
     """Minty Forest: cream panels under a mint -> teal sweep with a
     deep-forest accent (palette 1a312c / 428475 / 89d7b7 / fff4e1,
@@ -855,6 +884,37 @@ def minty_forest() -> Theme:
         header_gradient=("#2e5c4e", "#1a312c"),
         header_text="#ffffff",
         button_to="#2e5c4e",            # deep teal second stop
+    )
+
+
+def squished_forest() -> Theme:
+    """Squished Forest: the Minty Forest palette, flattened down.
+
+    Same cream panels and deep-forest accent as Minty Forest, but the
+    mint->teal sweep and glossy button are flattened: a flat mint
+    backdrop, flat deep-teal header, flat forest button.
+    """
+    return Theme(
+        name="Squished Forest",
+        colors={
+            "forest": "#1a312c",
+            "deep-teal": "#2e5c4e",
+            "teal": "#428475",
+            "mint": "#89d7b7",
+            "cream": "#fff4e1",
+        },
+        window_gradient=("#89d7b7", "#89d7b7"),   # flat mint
+        accent="#1a312c",               # forest: white text clears AA
+        accent2="#376f62",              # teal darkened: placeholder must read
+        panel_bg="#fff4e1",             # cream
+        panel_text="#1a312c",           # forest
+        text_on_accent="#ffffff",
+        status_bg="rgba(255, 255, 255, 0.45)",
+        status_text="#1a312c",
+        header_gradient=("#2e5c4e", "#2e5c4e"),   # flat deep teal
+        header_text="#ffffff",
+        button_to="#1a312c",            # same as accent: flat button
+        category="Flat",
     )
 
 
@@ -1565,6 +1625,8 @@ THEMES: list[Theme] = [
     dusk_flat(),
     flat_earth(),
     mint_at_night(),
+    lilac_love_2d(),
+    squished_forest(),
 ]
 
 
