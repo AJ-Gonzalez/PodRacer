@@ -7,7 +7,9 @@ here is fabricated on purpose — nothing maps to a real artist or album.
 
 from __future__ import annotations
 
+import subprocess
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from podracer_db import write_db
@@ -91,14 +93,56 @@ def demo_library() -> Library:
 
 
 def demo_music_tree(root: Path) -> Path:
-    """A fake Artist/Album/01 - Title.mp3 tree matching demo_library()."""
+    """A fake Artist/Album/01 - Title.mp3 tree matching demo_library().
+
+    The files are real (silent, tagged) MP3s so the demo covers the
+    whole add flow — drag a folder onto the library, watch it probe,
+    copy, and appear as tagged tracks. Without ffmpeg the files fall
+    back to empty placeholders so the UI-only showcase still boots.
+    """
     music = root / "Music"
-    for artist, (album, _year, titles) in _CATALOG.items():
-        album_dir = music / artist / album
-        album_dir.mkdir(parents=True, exist_ok=True)
-        for n, title in enumerate(titles, start=1):
-            (album_dir / f"{n:02d} - {title}.mp3").write_bytes(b"")
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        for artist, (album, year, titles) in _CATALOG.items():
+            album_dir = music / artist / album
+            album_dir.mkdir(parents=True, exist_ok=True)
+            for n, title in enumerate(titles, start=1):
+                # ffmpeg spawns are process-bound; the pool cuts the
+                # ~5 s sequential build to ~1.5 s. _write_demo_mp3
+                # swallows its own errors, so nothing can raise here.
+                pool.submit(
+                    _write_demo_mp3,
+                    album_dir / f"{n:02d} - {title}.mp3",
+                    artist, album, title, n, year,
+                )
     return music
+
+
+def _write_demo_mp3(
+    dest: Path, artist: str, album: str, title: str,
+    track_nr: int, year: int,
+) -> None:
+    """A real, probe-able silent MP3 carrying the catalog tags.
+
+    One ffmpeg call per track (~0.15 s, ~1.7 KB each). Failure is
+    silent: without ffmpeg the demo degrades to the old empty
+    placeholders rather than refusing to start.
+    """
+    try:
+        subprocess.run(
+            ["ffmpeg", "-nostdin", "-y", "-v", "error",
+             "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
+             "-t", "0.3", "-c:a", "libmp3lame", "-q:a", "9",
+             "-metadata", f"title={title}",
+             "-metadata", f"artist={artist}",
+             "-metadata", f"album={album}",
+             "-metadata", "genre=Demo",
+             "-metadata", f"track={track_nr}",
+             "-metadata", f"date={year}",
+             str(dest)],
+            capture_output=True, check=True, timeout=60,
+        )
+    except (subprocess.SubprocessError, FileNotFoundError):
+        dest.write_bytes(b"")
 
 
 def build_demo(root: Path | None = None) -> tuple[IPod, Path]:

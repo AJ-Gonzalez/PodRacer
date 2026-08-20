@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from podracer import demo
+from podracer.pipeline import read_tags
 from podracer_db import parse_db
 
 
@@ -33,6 +34,23 @@ class DemoLibraryTests(unittest.TestCase):
             )
             self.assertGreaterEqual(len(albums), 8)
             self.assertTrue((music / "Neon Harbor/Afterglow Boulevard").is_dir())
+
+    def test_demo_tree_files_are_real_tagged_audio(self):
+        """Every demo file must probe and carry the catalog tags, so the
+        add flow (drag -> probe -> copy) is demonstrable end-to-end."""
+        with tempfile.TemporaryDirectory() as tmp:
+            _ipod, music = demo.build_demo(Path(tmp))
+            seen = 0
+            for artist, (album, _year, titles) in demo._CATALOG.items():
+                for n, title in enumerate(titles, start=1):
+                    f = music / artist / album / f"{n:02d} - {title}.mp3"
+                    track = read_tags(f)
+                    self.assertEqual(track.title, title)
+                    self.assertEqual(track.artist, artist)
+                    self.assertEqual(track.album, album)
+                    self.assertGreaterEqual(track.tracklen, 100)
+                    seen += 1
+            self.assertGreaterEqual(seen, 30)
 
 
 if __name__ == "__main__":
