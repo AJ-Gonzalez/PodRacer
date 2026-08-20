@@ -537,11 +537,15 @@ class MainWindow(QMainWindow):
         )
         header = self.lib_view.horizontalHeader()
         # Every column is user-resizable, like the left pane. Widths
-        # are applied once on first show (saved widths, else the
-        # 30/30/30/10 percentage defaults) — see showEvent.
+        # persist across launches; without saved widths the right pane
+        # falls back to 30/30/30/10 proportional defaults that track
+        # window resizes until the user drags a column. No stretch
+        # section (see _set_lib_column_defaults).
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        header.setStretchLastSection(True)
-        self._columns_initialized = False
+        self._applying_columns = False
+        self._lib_columns_manual = False
+        self._restore_saved_column_widths()
+        header.sectionResized.connect(self._on_lib_section_resized)
 
         right_pane = QWidget(self)
         right_layout = QVBoxLayout(right_pane)
@@ -618,8 +622,9 @@ class MainWindow(QMainWindow):
         )
         self.appearance_button = QPushButton("Appearance", self)
         self.appearance_button.setToolTip(
-            "The look of PodRacer: theme, font, text size, and line "
-            "spacing (text-size shortcuts: Ctrl+ / Ctrl−)."
+            "The look of PodRacer: theme, font, text size, line "
+            "spacing, and column widths (text-size shortcuts: Ctrl+ "
+            "/ Ctrl−)."
         )
         self.appearance_button.clicked.connect(self._show_appearance_menu)
         self.appearance_menu = QMenu(self)
@@ -748,6 +753,15 @@ class MainWindow(QMainWindow):
                 lambda _=False, f=factor: self._set_line_spacing(f)
             )
             self._line_spacing_actions.append(action)
+
+        self.appearance_menu.addSeparator()
+        reset = self.appearance_menu.addAction("Reset column widths")
+        reset.setIcon(menu_icon("refresh-cw", panel_text, accent_text))
+        reset.setToolTip(
+            "Restore the library defaults (Title/Artist/Album 30%, "
+            "Time 10%) and the left pane's default widths."
+        )
+        reset.triggered.connect(self._reset_column_widths)
 
     def _font_label(self) -> str:
         return next(
@@ -1003,36 +1017,51 @@ class MainWindow(QMainWindow):
             self.check_button.setEnabled(False)
             self.setWindowTitle("PodRacer")
 
-    def showEvent(self, event) -> None:  # noqa: N802
-        super().showEvent(event)
-        if self._columns_initialized:
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        if self._lib_columns_manual:
             return
-        self._columns_initialized = True
-        self._init_column_widths()
+        # Proportional defaults re-apply on every resize — the first
+        # resizes carry transitional widths (seen: 100px before the
+        # real one), and layout can finish without a further resize.
+        # So re-apply now AND once the event loop catches up; both are
+        # idempotent, and a user drag freezes the layout.
+        self._set_lib_column_defaults()
+        QTimer.singleShot(0, self._settle_lib_columns)
 
-    def _init_column_widths(self) -> None:
-        """Apply persisted widths, or the right pane's percentage
-        defaults on first launch. Runs once, on first show, when the
-        panes actually have their real widths."""
-        fs_header = self.fs_view.header()          # QTreeView: header()
-        lib_header = self.lib_view.horizontalHeader()  # QTableView
-        saved_fs = self.settings.value("columns/fs", [], list)
-        if _valid_widths(saved_fs, fs_header.count()):
-            for col, size in enumerate(saved_fs):
-                fs_header.resizeSection(col, int(size))
-        saved_lib = self.settings.value("columns/lib", [], list)
-        if _valid_widths(saved_lib, lib_header.count()):
-            for col, size in enumerate(saved_lib):
-                lib_header.resizeSection(col, int(size))
-        else:
+    def _settle_lib_columns(self) -> None:
+        if not self._lib_columns_manual:
             self._set_lib_column_defaults()
 
     def _set_lib_column_defaults(self) -> None:
-        """Title/Artist/Album 30% each, Time 10% of the view width."""
-        header = self.lib_view.horizontalHeader()
+        """Title/Artist/Album 30% each, Time the remainder (10%).
+
+        Time absorbs the rounding so the four columns sum exactly to
+        the viewport width; the pane keeps no stretch section, which
+        would auto-resize Time and trip the drag-freeze detector.
+        """
         width = self.lib_view.viewport().width()
-        for col, frac in ((0, 0.30), (1, 0.30), (2, 0.30), (3, 0.10)):
-            header.resizeSection(col, int(width * frac))
+        title = int(width * 0.30)
+        self._apply_columns(
+            self.lib_view.horizontalHeader(),
+            [title, title, title, width - 3 * title],
+        )
+
+    def _apply_columns(self, header, widths) -> None:
+        """Programmatic column resize; guarded so the sectionResized
+        handler cannot mistake it for a user drag."""
+        self._applying_columns = True
+        try:
+            for col, width in enumerate(widths):
+                header.resizeSection(col, width)
+        finally:
+            self._applying_columns = False
+
+    def _on_lib_section_resized(self, *args) -> None:  # noqa: N802
+        # Any user drag freezes the proportional default so the next
+        # window resize does not clobber the user's layout.
+        if not self._applying_columns:
+            self._lib_columns_manual = True
 
     def _save_column_widths(self) -> None:
         """Remember both panes' column widths for next launch."""
@@ -1046,6 +1075,27 @@ class MainWindow(QMainWindow):
             "columns/lib",
             [lib_header.sectionSize(c) for c in range(lib_header.count())],
         )
+
+    def _restore_saved_column_widths(self) -> None:
+        """Apply persisted widths from the last run (absolute px)."""
+        fs_header = self.fs_view.header()          # QTreeView: header()
+        lib_header = self.lib_view.horizontalHeader()  # QTableView
+        saved_fs = self.settings.value("columns/fs", [], list)
+        if _valid_widths(saved_fs, fs_header.count()):
+            self._apply_columns(fs_header, [int(w) for w in saved_fs])
+        saved_lib = self.settings.value("columns/lib", [], list)
+        if _valid_widths(saved_lib, lib_header.count()):
+            self._apply_columns(lib_header, [int(w) for w in saved_lib])
+            self._lib_columns_manual = True
+
+    def _reset_column_widths(self) -> None:
+        """Clear saved widths and restore both panes' defaults now."""
+        self.settings.remove("columns/fs")
+        self.settings.remove("columns/lib")
+        self._apply_columns(self.fs_view.header(), (280, 80, 90, 130))
+        self._lib_columns_manual = False
+        self._set_lib_column_defaults()
+        self._status("Column widths reset to defaults.")
 
     # -- filesystem pane -------------------------------------------------
 

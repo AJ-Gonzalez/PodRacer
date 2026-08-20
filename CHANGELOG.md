@@ -9,7 +9,7 @@ heading, so an optional nickname in quotes lands in the title.
 - Bulk metadata: "Protect track titles" checkbox (checked by default) guards against accidentally overwriting every selected track's title; uncheck to set all titles to one value.
 - File browser: "Set as top-level folder" on the folder right-click menu roots the pane there for the session only — the saved default music folder is untouched.
 - Demo mode: the sample music tree now contains real (silent, tagged) audio instead of empty placeholders, so drag-and-drop, add, and sync are demonstrable end-to-end (including duplicate detection on re-drop).
-- Library: all four columns (Title/Artist/Album/Time) are now user-resizable like the left pane. Defaults are proportional — Title/Artist/Album 30% each, Time 10% of the pane width — and both panes' column widths now persist across launches.
+- Library: all four columns (Title/Artist/Album/Time) are now user-resizable like the left pane. Defaults are proportional — Title/Artist/Album 30% each, Time 10% of the pane width, tracked across window resizes until you drag a column — and both panes' column widths persist across launches. Appearance menu gains "Reset column widths" to restore the defaults and clear the saved layout.
 
 ## [1.2.1] - 2026-08-19 "Headlong"
 

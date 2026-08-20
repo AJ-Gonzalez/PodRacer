@@ -187,16 +187,37 @@ class LeftPaneTests(_QtCase):
         for col in range(header.count()):
             self.assertEqual(header.sectionResizeMode(col),
                              QHeaderView.ResizeMode.Interactive, col)
-        self.assertTrue(header.stretchLastSection())
         win.close()
 
-    def test_library_default_columns_are_percentages(self):
-        # Clear any persisted widths first: QSettings resolves to a
-        # process-wide store, so an earlier persistence test would
-        # otherwise supply saved widths instead of the defaults.
+    def test_library_columns_freeze_on_user_drag(self):
+        self._clear_column_settings()
         win = MainWindow()
-        win.settings.remove("columns/lib")
-        win.settings.remove("columns/fs")
+        win.resize(900, 600)
+        win.show()
+        self.app.processEvents()
+        header = win.lib_view.horizontalHeader()
+        self.assertFalse(win._lib_columns_manual)
+        header.resizeSection(2, 250)   # simulates a user drag
+        self.assertTrue(win._lib_columns_manual)
+        # A later window resize must not clobber the user's drag.
+        win.resize(1000, 600)
+        self.app.processEvents()
+        self.assertEqual(header.sectionSize(2), 250)
+        win.close()
+
+    @staticmethod
+    def _clear_column_settings():
+        # MainWindow() restores saved widths in its constructor, so the
+        # keys must be cleared before the window exists. QSettings
+        # resolves to a process-wide store, so a standalone instance
+        # reaches the same file the windows use.
+        from PySide6.QtCore import QSettings
+        QSettings("PodRacer", "PodRacer").remove("columns/lib")
+        QSettings("PodRacer", "PodRacer").remove("columns/fs")
+
+    def test_library_default_columns_are_percentages(self):
+        self._clear_column_settings()
+        win = MainWindow()
         win.resize(900, 600)
         win.show()
         self.app.processEvents()
@@ -212,18 +233,35 @@ class LeftPaneTests(_QtCase):
     def test_column_widths_persist_across_windows(self):
         win = MainWindow()
         win.resize(900, 600)
-        win._init_column_widths()
         win.lib_view.horizontalHeader().resizeSection(0, 321)
         win.fs_view.header().resizeSection(1, 177)
         win._save_column_widths()
         win.close()
-        win2 = MainWindow()
-        win2._init_column_widths()
+        win2 = MainWindow()   # restores saved widths in its constructor
         self.assertEqual(
             win2.lib_view.horizontalHeader().sectionSize(0), 321)
         self.assertEqual(
             win2.fs_view.header().sectionSize(1), 177)
         win2.close()
+
+    def test_reset_column_widths_restores_defaults_and_clears_saved(self):
+        win = MainWindow()
+        win.settings.remove("columns/fs")
+        win.settings.remove("columns/lib")
+        win.resize(900, 600)
+        win.show()
+        self.app.processEvents()
+        lib_header = win.lib_view.horizontalHeader()
+        width = win.lib_view.viewport().width()
+        lib_header.resizeSection(0, 321)      # user drags both panes
+        win.fs_view.header().resizeSection(1, 177)
+        win._save_column_widths()
+        win._reset_column_widths()
+        self.assertEqual(lib_header.sectionSize(0), int(width * 0.30))
+        self.assertEqual(win.fs_view.header().sectionSize(1), 80)
+        self.assertEqual(win.settings.value("columns/fs", [], list), [])
+        self.assertEqual(win.settings.value("columns/lib", [], list), [])
+        win.close()
 
     def test_left_pane_multi_select_enabled(self):
         # The default selection mode is SingleSelection, which silently
