@@ -67,7 +67,15 @@ from .fonts import (
 from .icons import tinted_icon
 from .pipeline import ACCEPTED_EXTENSIONS, AddResult, collect_audio
 from .sync import SyncSession
-from .themes import THEMES, apply_theme, is_dark, theme_by_name, theme_label
+from .themes import (
+    SYSTEM_THEME,
+    THEMES,
+    apply_theme,
+    is_dark,
+    system_resolved_theme,
+    theme_by_name,
+    theme_label,
+)
 from podracer_db.model import Track
 
 def _fmt_ms(ms: int) -> str:
@@ -582,6 +590,7 @@ class MainWindow(QMainWindow):
         self.appearance_button.clicked.connect(self._show_appearance_menu)
         self.appearance_menu = QMenu(self)
         self._theme_actions: list = []
+        self._system_theme_action = None
         self._font_actions: list = []
         self._size_actions: list = []
         self._line_spacing_actions: list = []
@@ -607,6 +616,13 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.appearance_button)
         self._load_settings()
         self._refresh_icons()
+        # Follow system theme tracks live light/dark flips without
+        # touching the saved choice (the scheme is the environment's).
+        app = QApplication.instance()
+        if app is not None:
+            app.styleHints().colorSchemeChanged.connect(
+                self._on_scheme_changed
+            )
         # Font size stays one keystroke away even behind the menu.
         QShortcut(QKeySequence(QKeySequence.StandardKey.ZoomIn), self,
                   lambda: self._bump_font(1))
@@ -631,12 +647,20 @@ class MainWindow(QMainWindow):
         self._size_actions = []
         self._line_spacing_actions = []
         try:
-            menu_tint = theme_by_name(self._theme_name).panel_text
+            menu_tint = self._current_theme().panel_text
         except KeyError:
             menu_tint = THEMES[0].panel_text
 
         theme_menu = self.appearance_menu.addMenu("Theme")
         theme_menu.setIcon(tinted_icon("palette", menu_tint))
+        self._system_theme_action = theme_menu.addAction(
+            f"{SYSTEM_THEME}\t(Boring)"
+        )
+        self._system_theme_action.setIcon(tinted_icon("monitor", menu_tint))
+        self._system_theme_action.setCheckable(True)
+        self._system_theme_action.setChecked(self._theme_name == SYSTEM_THEME)
+        self._system_theme_action.triggered.connect(self._set_system_theme)
+        theme_menu.addSeparator()
         for theme in THEMES:
             action = theme_menu.addAction(theme_label(theme))
             action.setIcon(tinted_icon(
@@ -705,6 +729,33 @@ class MainWindow(QMainWindow):
         self._refresh_icons()
         self._status(f"Theme: {theme.name}")
 
+    def _current_theme(self) -> Theme:
+        """The theme actually rendered: resolved when system-following."""
+        if self._theme_name == SYSTEM_THEME:
+            return system_resolved_theme()
+        return theme_by_name(self._theme_name)
+
+    def _set_system_theme(self) -> None:
+        self._theme_name = SYSTEM_THEME
+        self.settings.setValue("theme/name", SYSTEM_THEME)
+        self._apply_resolved_theme()
+        self._rebuild_appearance_menu()
+        self._status("Theme: Follow system theme")
+
+    def _apply_resolved_theme(self) -> None:
+        """Apply whichever theme _current_theme() resolves to, live."""
+        app = QApplication.instance()
+        if app is None:
+            return
+        theme = self._current_theme()
+        apply_theme(app, theme)
+        self._refresh_icons()
+
+    def _on_scheme_changed(self, scheme) -> None:
+        """System light/dark flipped; re-resolve only while following."""
+        if self._theme_name == SYSTEM_THEME:
+            self._apply_resolved_theme()
+
     def _refresh_icons(self) -> None:
         """Re-tint the status-bar/button icons for the current theme.
 
@@ -712,7 +763,7 @@ class MainWindow(QMainWindow):
         text_on_accent (the same AA-checked pair as the label text).
         """
         try:
-            theme = theme_by_name(self._theme_name)
+            theme = self._current_theme()
         except KeyError:
             return
         color = theme.text_on_accent
@@ -777,12 +828,16 @@ class MainWindow(QMainWindow):
 
     def _load_settings(self) -> None:
         theme_name = self.settings.value("theme/name", THEMES[0].name, str)
-        try:
-            from .themes import theme_by_name
-            theme = theme_by_name(theme_name)
-        except KeyError:
-            theme = THEMES[0]
-        self._theme_name = theme.name
+        if theme_name == SYSTEM_THEME:
+            self._theme_name = SYSTEM_THEME
+            theme = system_resolved_theme()
+        else:
+            try:
+                from .themes import theme_by_name
+                theme = theme_by_name(theme_name)
+            except KeyError:
+                theme = THEMES[0]
+            self._theme_name = theme.name
         app = QApplication.instance()
         if app is not None:
             apply_theme(app, theme)

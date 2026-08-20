@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
 
 from podracer_db.model import Track
 from podracer.fonts import FONT_OPTIONS, LINE_SPACINGS, MAX_SIZE, MIN_SIZE
-from podracer.themes import THEMES, theme_label
+from podracer.themes import SYSTEM_THEME, THEMES, theme_label
 from podracer.ui import (
     BulkMetadataDialog,
     LibraryView,
@@ -512,6 +512,30 @@ class AppearanceMenuTests(_QtCase):
         for action, theme in zip(win._theme_actions, THEMES):
             self.assertEqual(action.text(), theme_label(theme))
             self.assertFalse(action.icon().isNull())
+        win.close()
+
+    def test_system_theme_action_present_and_applies(self):
+        win = MainWindow()
+        action = win._system_theme_action
+        self.assertIsNotNone(action)
+        self.assertEqual(action.text(), f"{SYSTEM_THEME}\t(Boring)")
+        self.assertFalse(action.icon().isNull())
+        action.trigger()
+        self.assertEqual(win._theme_name, SYSTEM_THEME)
+        self.assertEqual(
+            win.settings.value("theme/name", "", str), SYSTEM_THEME
+        )
+        # While following, the rendered theme is always a real one and
+        # the checkmark stays on the system action.
+        self.assertIn(win._current_theme().name,
+                      [t.name for t in THEMES])
+        checked = [a for a in win._theme_actions if a.isChecked()]
+        self.assertEqual(checked, [])
+        self.assertTrue(action.isChecked())
+        # Picking a real theme leaves system mode. The menu rebuilds,
+        # so the action reference must be re-fetched.
+        win._apply_theme(THEMES[1])
+        self.assertFalse(win._system_theme_action.isChecked())
         win.close()
 
     def test_size_action_applies_and_checks(self):

@@ -1,10 +1,12 @@
 """Bundled fonts: registration + application-wide font control.
 
 Comic Neue and OpenDyslexic are the dyslexia-friendly options
-(AGENTS.md), IBM Plex Mono is the monospace option, Macondo and
-Amarante are the display/art options. All are SIL OFL and shipped
-inside the app bundle; Qt loads them from disk or from the PyInstaller
-onefile temp dir.
+(AGENTS.md), Atkinson Hyperlegible is the low-vision face (Braille
+Institute), Lexend targets reading proficiency/visual stress, IBM Plex
+Mono is the monospace option, Macondo and Amarante are the
+display/art options. All are SIL OFL and shipped inside the app
+bundle; Qt loads them from disk or from the PyInstaller onefile temp
+dir.
 
 `apply_font()` re-scales the whole UI live: Qt propagates the
 application font to every widget, and layouts recompute from font
@@ -19,9 +21,17 @@ from pathlib import Path
 from PySide6.QtGui import QFont, QFontDatabase
 
 # (regular, bold) — bold may be None for single-weight families.
+# Atkinson Hyperlegible (Braille Institute) is the low-vision face;
+# Lexend is the reading-proficiency/dyslexia face. Both SIL OFL.
+# Lexend is a variable font: one file covers every weight, and Qt maps
+# QFont weight to the wght axis (verified: Normal 400, Bold 700), so
+# bold is None and the file is registered once.
 FONTS = {
     "OpenDyslexic3": ("OpenDyslexic3Regular.ttf", "OpenDyslexic3Bold.ttf"),
     "Comic Neue": ("ComicNeue-Regular.ttf", "ComicNeue-Bold.ttf"),
+    "Atkinson Hyperlegible": ("AtkinsonHyperlegible-Regular.ttf",
+                              "AtkinsonHyperlegible-Bold.ttf"),
+    "Lexend": ("Lexend.ttf", None),
     "IBM Plex Mono": ("IBMPlexMono-Regular.ttf", "IBMPlexMono-Bold.ttf"),
     "Macondo": ("Macondo-Regular.ttf", None),
     "Amarante": ("Amarante-Regular.ttf", None),
@@ -30,6 +40,8 @@ FONTS = {
 # Order shown in the switcher; "" = the platform's system font.
 FONT_OPTIONS = [("System Font", ""), ("Comic Neue", "Comic Neue"),
                 ("OpenDyslexic3", "OpenDyslexic3"),
+                ("Atkinson Hyperlegible", "Atkinson Hyperlegible"),
+                ("Lexend", "Lexend"),
                 ("IBM Plex Mono", "IBM Plex Mono"),
                 ("Macondo", "Macondo"),
                 ("Amarante", "Amarante")]

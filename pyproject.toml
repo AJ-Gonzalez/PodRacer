@@ -24,3 +24,8 @@ podracer = "podracer.main:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["podracer"]
+
+# The wheel must carry the bundled fonts/icons or a pip-installed app
+# silently runs without them (onefile bundles via --add-data instead).
+[tool.setuptools.package-data]
+podracer = ["fonts/*.ttf", "fonts/LICENSE-*.txt", "assets/*.png", "assets/icons/*"]

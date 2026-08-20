@@ -16,7 +16,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPalette
+from PySide6.QtWidgets import QApplication
 
 _HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$")
 
@@ -1247,4 +1249,26 @@ def theme_by_name(name: str) -> Theme:
         if theme.name == name:
             return theme
     raise KeyError(name)
+
+
+# Sentinel theme-menu entry: not a real Theme, resolves at apply time.
+SYSTEM_THEME = "Follow system theme"
+
+# The neutral dark theme used when the system scheme is dark.
+_SYSTEM_DARK_THEME = "Grey Moonlight"
+
+
+def system_resolved_theme(app=None) -> Theme:
+    """The built-in theme matching the system light/dark scheme.
+
+    Qt reports the desktop's preference via QStyleHints.colorScheme()
+    (QColorScheme: Unknown falls back to light). Called at apply time
+    and on QStyleHints.colorSchemeChanged so "Follow system theme"
+    tracks live flips.
+    """
+    app = app or QApplication.instance()
+    scheme = app.styleHints().colorScheme() if app is not None else Qt.ColorScheme.Unknown
+    if scheme == Qt.ColorScheme.Dark:
+        return theme_by_name(_SYSTEM_DARK_THEME)
+    return THEMES[0]
 

@@ -5,12 +5,14 @@ import unittest
 from PySide6.QtWidgets import QApplication
 
 from podracer.themes import (
+    SYSTEM_THEME,
     THEMES,
     Theme,
     apply_theme,
     contrast_ratio,
     resolved_button_to,
     resolved_pressed,
+    system_resolved_theme,
     theme_by_name,
 )
 
@@ -69,6 +71,13 @@ class PaletteTests(unittest.TestCase):
         self.assertEqual(theme_by_name(THEMES[0].name), THEMES[0])
         with self.assertRaises(KeyError):
             theme_by_name("No Such Theme")
+
+    def test_system_theme_resolves_to_a_real_theme(self):
+        # The sentinel is not a theme itself; the resolver always lands
+        # on a bundled one (offscreen reports Light/Unknown).
+        self.assertNotIn(SYSTEM_THEME, [t.name for t in THEMES])
+        resolved = system_resolved_theme()
+        self.assertIn(resolved, THEMES)
 
 
 class ApplyThemeTests(unittest.TestCase):
