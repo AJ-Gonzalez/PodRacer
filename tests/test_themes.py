@@ -98,7 +98,9 @@ class PaletteTests(unittest.TestCase):
             by_category["Computery Stuff"],
             {"I know Kung Fu", "My name is Neo", "Solarized Dark",
              "Kanagawa Terminal", "Miasma Terminal",
-             "Tokyo Night Terminal"},
+             "Tokyo Night Terminal", "Solarized Light", "Tango",
+             "Gruvbox Dark", "Catppuccin Latte", "Catppuccin Frappé",
+             "Catppuccin Macchiato", "Catppuccin Mocha"},
         )
         self.assertNotIn("Give me the night", by_category["Psychonaut"])
         self.assertEqual(

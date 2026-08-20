@@ -24,6 +24,7 @@ heading, so an optional nickname in quotes lands in the title.
 - New flat themes: Bought a Binder (Butch Cassidy flattened), Square Rooms (Human Dark flattened — solid brown + solid orange titlebar), and Hip to be Square (muted American Beauty/Psycho palette #d7cba2 #d4cfc1 #6d6e8e #343030 #577655, color-hex). All with square buttons, WCAG AA verified.
 - New theme menu category: Psychonaut (Magenta Daydream, Bubblegum Haze, Analog Sunrise, Stoner Shore).
 - New Computery Stuff themes: Kanagawa Terminal, Miasma Terminal, and Tokyo Night Terminal (palettes from terminalcolors.com), plus the flat Tokyo Night 2D. All WCAG AA verified.
+- New Computery Stuff themes: Solarized Light, Tango (Tango Desktop Project palette), Gruvbox Dark, and the four Catppuccin flavors (Latte, Frappé, Macchiato, Mocha) — official palettes. All WCAG AA verified.
 - New theme: XP Memories — Windows XP Luna (XP blue titlebar/buttons, beige window face, XP navy text, Bliss-sky backdrop). Retro Aesthetics category. WCAG AA verified.
 - Theme menu: each category (Classic, Psychonaut, Retro Aesthetics, ATLA, Computery Stuff, Flat) is now its own submenu instead of inline headers.
 - Theme menu: a pinned "Current: … (category)" line at the top shows the active theme and its category, so you never have to browse the submenus to find where you are.

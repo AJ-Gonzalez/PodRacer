@@ -1970,6 +1970,208 @@ def tokyo_night_2d() -> Theme:
     )
 
 
+def solarized_light() -> Theme:
+    """Solarized Light: Ethan Schoonover's Solarized light terminal.
+
+    The official base palette on the light side: base3 #fdf6e3 panels
+    carry base01 #586e75 text (the raw base00 is only 4.16:1 — derived
+    darker for AA), cyan #2aa198 accent with base03 text, base2/base3
+    header with base02 text. The cyan is also the button stop:
+    darkening it breaks AA with the dark text.
+    """
+    return Theme(
+        name="Solarized Light",
+        colors={
+            "base03": "#002b36", "base02": "#073642",
+            "base01": "#586e75", "base00": "#657b83",
+            "base0": "#839496", "base1": "#93a1a1",
+            "base2": "#eee8d5", "base3": "#fdf6e3",
+            "yellow": "#b58900", "orange": "#cb4b16", "red": "#dc322f",
+            "magenta": "#d33682", "violet": "#6c71c4",
+            "blue": "#268bd2", "cyan": "#2aa198", "green": "#859900",
+        },
+        window_gradient=("#fdf6e3", "#eee8d5"),
+        accent="#2aa198",               # cyan: base03 text clears AA (4.75)
+        accent2="#586e75",              # base01: placeholder must read
+        panel_bg="#fdf6e3",             # base3
+        panel_text="#586e75",           # base01 (base00 is 4.16:1, too thin)
+        text_on_accent="#002b36",       # base03
+        status_bg="rgba(255, 255, 255, 0.35)",
+        status_text="#586e75",
+        header_gradient=("#eee8d5", "#fdf6e3"),   # base2 -> base3
+        header_text="#073642",          # base02
+        button_to="#2aa198",            # cyan: darkening breaks AA with dark text
+        category="Computery Stuff",
+    )
+
+
+def tango() -> Theme:
+    """Tango: the Tango Desktop Project palette.
+
+    The standardized 16-color scheme (GNOME's default): aluminium6
+    #2e3436 panels with aluminium1 #eeeeec text, sky-blue #3465a4
+    accent with white text, aluminium3 #babdb6 placeholder, a
+    blue->dark header.
+    """
+    return Theme(
+        name="Tango",
+        colors={"aluminium6": "#2e3436", "aluminium5": "#555753",
+                "aluminium4": "#888a85", "aluminium3": "#babdb6",
+                "aluminium2": "#d3d7cf", "aluminium1": "#eeeeec",
+                "butter": "#fce94f", "orange": "#fcaf3e",
+                "chocolate": "#e9b96e", "chameleon": "#8ae234",
+                "sky-blue": "#729fcf", "plum": "#ad7fa8",
+                "scarlet": "#ef2929"},
+        window_gradient=("#2e3436", "#22272b"),
+        accent="#3465a4",               # sky blue 2: white text clears AA
+        accent2="#babdb6",              # aluminium3: placeholder must read
+        panel_bg="#2e3436",             # aluminium6
+        panel_text="#eeeeec",           # aluminium1
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#eeeeec",
+        header_gradient=("#3465a4", "#2e3436"),
+        header_text="#ffffff",
+        category="Computery Stuff",
+    )
+
+
+def gruvbox_dark() -> Theme:
+    """Gruvbox Dark: the gruvbox dark terminal palette.
+
+    Palette from terminalcolors.com (alacritty export): dark #282828
+    panels, warm #ebdbb2 text, the hard red #cc241d accent with white
+    text, warm-gray header.
+    """
+    return Theme(
+        name="Gruvbox Dark",
+        colors={"bg": "#282828", "fg": "#ebdbb2", "red": "#cc241d",
+                "green": "#98971a", "yellow": "#d79921", "blue": "#458588",
+                "purple": "#b16286", "aqua": "#689d6a", "gray": "#a89984"},
+        window_gradient=("#282828", "#1d2021"),
+        accent="#cc241d",               # red: white text clears AA
+        accent2="#ebdbb2",              # fg: placeholder must read
+        panel_bg="#282828",
+        panel_text="#ebdbb2",
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#ebdbb2",
+        header_gradient=("#3c3836", "#282828"),
+        header_text="#ebdbb2",
+        category="Computery Stuff",
+    )
+
+
+def catppuccin_latte() -> Theme:
+    """Catppuccin Latte: the light flavor, official palette.
+
+    Base #eff1f5 panels, text #4c4f69, the blue #1e66f5 accent with
+    white text (4.9:1 — dark text fails on it), crust header.
+    """
+    return Theme(
+        name="Catppuccin Latte",
+        colors={"base": "#eff1f5", "mantle": "#e6e9ef", "crust": "#dce0e8",
+                "text": "#4c4f69", "blue": "#1e66f5", "red": "#d20f39",
+                "green": "#40a02b", "yellow": "#df8e1d", "mauve": "#8839ef",
+                "pink": "#ea76cb", "teal": "#179299"},
+        window_gradient=("#eff1f5", "#e6e9ef"),
+        accent="#1e66f5",               # blue: white text clears AA
+        accent2="#4c4f69",              # text: placeholder must read
+        panel_bg="#eff1f5",             # base
+        panel_text="#4c4f69",           # text
+        text_on_accent="#ffffff",
+        status_bg="rgba(255, 255, 255, 0.35)",
+        status_text="#4c4f69",
+        header_gradient=("#dce0e8", "#eff1f5"),   # crust -> base
+        header_text="#4c4f69",
+        category="Computery Stuff",
+    )
+
+
+def catppuccin_frappe() -> Theme:
+    """Catppuccin Frappé: the mocha-tinted dark flavor, official palette.
+
+    Base #303446 panels, text #c6d0f5, the blue #8caaee accent with
+    the base color as text (5.3:1); blue also the button stop, since
+    darkening it breaks AA with the dark text.
+    """
+    return Theme(
+        name="Catppuccin Frappé",
+        colors={"base": "#303446", "mantle": "#292c3c", "crust": "#232634",
+                "text": "#c6d0f5", "blue": "#8caaee", "red": "#e78284",
+                "green": "#a6d189", "yellow": "#e5c890", "mauve": "#ca9ee6",
+                "pink": "#f4b8e4", "teal": "#81c8be"},
+        window_gradient=("#303446", "#292c3c"),
+        accent="#8caaee",               # blue: base text clears AA
+        accent2="#c6d0f5",              # text: placeholder must read
+        panel_bg="#303446",
+        panel_text="#c6d0f5",
+        text_on_accent="#303446",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#c6d0f5",
+        header_gradient=("#414559", "#303446"),
+        header_text="#c6d0f5",
+        button_to="#8caaee",            # blue: darkening breaks AA with dark text
+        category="Computery Stuff",
+    )
+
+
+def catppuccin_macchiato() -> Theme:
+    """Catppuccin Macchiato: the darker flavor, official palette.
+
+    Base #24273a panels, text #cad3f5, the blue #8aadf4 accent with
+    the base color as text; blue also the button stop (darkening
+    breaks AA with dark text).
+    """
+    return Theme(
+        name="Catppuccin Macchiato",
+        colors={"base": "#24273a", "mantle": "#1e2030", "crust": "#181926",
+                "text": "#cad3f5", "blue": "#8aadf4", "red": "#ed8796",
+                "green": "#a6da95", "yellow": "#eed49f", "mauve": "#c6a0f6",
+                "pink": "#f5bde6", "teal": "#8bd5ca"},
+        window_gradient=("#24273a", "#1e2030"),
+        accent="#8aadf4",               # blue: base text clears AA
+        accent2="#cad3f5",              # text: placeholder must read
+        panel_bg="#24273a",
+        panel_text="#cad3f5",
+        text_on_accent="#24273a",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#cad3f5",
+        header_gradient=("#363a4f", "#24273a"),
+        header_text="#cad3f5",
+        button_to="#8aadf4",            # blue: darkening breaks AA with dark text
+        category="Computery Stuff",
+    )
+
+
+def catppuccin_mocha() -> Theme:
+    """Catppuccin Mocha: the darkest flavor, official palette.
+
+    Base #1e1e2e panels, text #cdd6f4, the blue #89b4fa accent with
+    the base color as text (7.8:1); blue also the button stop
+    (darkening breaks AA with dark text).
+    """
+    return Theme(
+        name="Catppuccin Mocha",
+        colors={"base": "#1e1e2e", "mantle": "#181825", "crust": "#11111b",
+                "text": "#cdd6f4", "blue": "#89b4fa", "red": "#f38ba8",
+                "green": "#a6e3a1", "yellow": "#f9e2af", "mauve": "#cba6f7",
+                "pink": "#f5c2e7", "teal": "#94e2d5"},
+        window_gradient=("#1e1e2e", "#181825"),
+        accent="#89b4fa",               # blue: base text clears AA
+        accent2="#cdd6f4",              # text: placeholder must read
+        panel_bg="#1e1e2e",
+        panel_text="#cdd6f4",
+        text_on_accent="#1e1e2e",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#cdd6f4",
+        header_gradient=("#313244", "#1e1e2e"),
+        header_text="#cdd6f4",
+        button_to="#89b4fa",            # blue: darkening breaks AA with dark text
+        category="Computery Stuff",
+    )
+
+
 def give_me_the_night() -> Theme:
     """Give me the night: charcoal -> plum -> magenta night palette.
 
@@ -2053,6 +2255,13 @@ THEMES: list[Theme] = [
     kanagawa_terminal(),
     miasma_terminal(),
     tokyo_night_terminal(),
+    solarized_light(),
+    tango(),
+    gruvbox_dark(),
+    catppuccin_latte(),
+    catppuccin_frappe(),
+    catppuccin_macchiato(),
+    catppuccin_mocha(),
     # Flat
     flat_sunrise(),
     dusk_flat(),
