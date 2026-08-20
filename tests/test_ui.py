@@ -190,34 +190,40 @@ class LeftPaneTests(_QtCase):
         self.assertTrue(header.stretchLastSection())
         win.close()
 
-    def test_library_columns_content_fit_once(self):
-        win, tmp = self._make_window_with_session(count=2)
+    def test_library_default_columns_are_percentages(self):
+        # Clear any persisted widths first: QSettings resolves to a
+        # process-wide store, so an earlier persistence test would
+        # otherwise supply saved widths instead of the defaults.
+        win = MainWindow()
+        win.settings.remove("columns/lib")
+        win.settings.remove("columns/fs")
+        win.resize(900, 600)
+        win.show()
+        self.app.processEvents()
         try:
-            win._refresh_after_change()
-            self.assertTrue(win._lib_columns_fitted)
             header = win.lib_view.horizontalHeader()
-            self.assertGreater(header.sectionSize(0), 50)  # content-fitted
-            # One-time: a later refresh must not fight the user's drags.
-            header.resizeSection(0, 400)
-            win._refresh_after_change()
-            self.assertEqual(header.sectionSize(0), 400)
+            width = win.lib_view.viewport().width()
+            for col, frac in ((0, 0.30), (1, 0.30), (2, 0.30), (3, 0.10)):
+                self.assertAlmostEqual(
+                    header.sectionSize(col) / width, frac, delta=0.02, msg=col)
         finally:
-            win.session.close()
             win.close()
-            tmp.cleanup()
 
-    def test_library_columns_cap_long_titles(self):
-        win, tmp = self._make_window_with_session(count=2)
-        try:
-            win.session.tracks[0].title = "X" * 200
-            win._refresh_after_change()
-            self.assertTrue(win._lib_columns_fitted)
-            self.assertEqual(
-                win.lib_view.horizontalHeader().sectionSize(0), 360)
-        finally:
-            win.session.close()
-            win.close()
-            tmp.cleanup()
+    def test_column_widths_persist_across_windows(self):
+        win = MainWindow()
+        win.resize(900, 600)
+        win._init_column_widths()
+        win.lib_view.horizontalHeader().resizeSection(0, 321)
+        win.fs_view.header().resizeSection(1, 177)
+        win._save_column_widths()
+        win.close()
+        win2 = MainWindow()
+        win2._init_column_widths()
+        self.assertEqual(
+            win2.lib_view.horizontalHeader().sectionSize(0), 321)
+        self.assertEqual(
+            win2.fs_view.header().sectionSize(1), 177)
+        win2.close()
 
     def test_left_pane_multi_select_enabled(self):
         # The default selection mode is SingleSelection, which silently
