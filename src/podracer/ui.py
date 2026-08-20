@@ -34,6 +34,7 @@ from PySide6.QtCore import (
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QCheckBox,
     QDialog,
     QFileDialog,
     QFileSystemModel,
@@ -268,6 +269,26 @@ class BulkMetadataDialog(QDialog):
             self._edits[field] = edit
             form.addWidget(label)
             form.addWidget(edit)
+            if field == "Title":
+                # Writing one title over every selected track is almost
+                # never intended, so it starts protected: the field is
+                # disabled until the guard is unchecked.
+                guard = QCheckBox("Protect track titles", self)
+                guard.setToolTip(
+                    "Keep every selected track's title. Uncheck to set "
+                    "all of them to the same value."
+                )
+                # Connect before setChecked: the initial toggled(True)
+                # must reach the disabled state, not just later flips.
+                # Checked = protected = field disabled, hence the flip.
+                # edit=edit binds the current loop value: the lambda
+                # runs after the loop, when `edit` names the last field.
+                guard.toggled.connect(
+                    lambda checked, edit=edit: edit.setEnabled(not checked)
+                )
+                guard.setChecked(True)
+                form.addWidget(guard)
+                self._title_guard = guard
         buttons = QHBoxLayout()
         cancel = QPushButton("Cancel", self)
         cancel.clicked.connect(self.reject)
@@ -280,9 +301,15 @@ class BulkMetadataDialog(QDialog):
         form.addLayout(buttons)
 
     def values(self) -> dict:
-        """Only the filled fields, ready for set_metadata_bulk (None = leave)."""
+        """Only the filled fields, ready for set_metadata_bulk (None = leave).
+
+        The title is excluded while the guard is checked — a protected
+        field is never applied, even if text sits in the disabled edit.
+        """
         out = {}
         for field, edit in self._edits.items():
+            if field == "Title" and self._title_guard.isChecked():
+                continue
             text = edit.text().strip()
             if text:
                 out[field.lower()] = text
@@ -1005,6 +1032,13 @@ class MainWindow(QMainWindow):
         send.setToolTip("Add every music or video file in this folder to the iPod.")
         send.triggered.connect(lambda: self._files_dropped([str(path)]))
         if path.is_dir():
+            menu.addSeparator()
+            top_level = menu.addAction("Set as top-level folder")
+            top_level.setToolTip(
+                "Browse this folder as the top level for this session "
+                "only (not saved)."
+            )
+            top_level.triggered.connect(lambda: self._set_top_level(path))
             set_home = menu.addAction("Set as default music folder")
             set_home.setToolTip("The app opens on this folder next time.")
             set_home.triggered.connect(lambda: self._set_music_home(path))
@@ -1012,6 +1046,18 @@ class MainWindow(QMainWindow):
                 reset = menu.addAction("Clear default — start at Home")
                 reset.triggered.connect(self._clear_music_home)
         menu.exec(self.fs_view.viewport().mapToGlobal(pos))
+
+    def _set_top_level(self, path: Path) -> None:
+        """Root the browser at this folder for this session only.
+
+        Like the default music folder, but never persisted: the app
+        still opens at the saved default next time.
+        """
+        self.fs_view.setRootIndex(
+            self.fs_proxy.mapFromSource(self.fs_model.index(str(path)))
+        )
+        self.path_bar.setText(str(path))
+        self._status(f"Top level for this session: {path}")
 
     def _set_music_home(self, path: Path) -> None:
         self.settings.setValue("fs/home", str(path))

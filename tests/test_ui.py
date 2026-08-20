@@ -343,6 +343,24 @@ class MetadataEditTests(_QtCase):
         self.assertEqual(dialog.values(), {"artist": "New Artist"})
         dialog.deleteLater()
 
+    def test_bulk_dialog_title_protected_by_default(self):
+        dialog = BulkMetadataDialog(3)
+        guard = dialog._title_guard
+        self.assertTrue(guard.isChecked())
+        self.assertFalse(dialog._edits["Title"].isEnabled())
+        # A stray value in the disabled field must never apply.
+        dialog._edits["Title"].setText("Clobbered")
+        self.assertEqual(dialog.values(), {})
+        dialog.deleteLater()
+
+    def test_bulk_dialog_title_guard_releases_field(self):
+        dialog = BulkMetadataDialog(3)
+        dialog._title_guard.setChecked(False)
+        self.assertTrue(dialog._edits["Title"].isEnabled())
+        dialog._edits["Title"].setText("Same Title")
+        self.assertEqual(dialog.values(), {"title": "Same Title"})
+        dialog.deleteLater()
+
     def test_apply_bulk_metadata_edits_all_and_dirty(self):
         win, tmp = self._make_window_with_session(count=2)
         try:
@@ -413,6 +431,22 @@ class MusicHomeTests(_QtCase):
             os.environ["XDG_CONFIG_HOME"] = self._old_xdg
         self._tmp.cleanup()
         super().tearDown()
+
+    def test_set_top_level_navigates_without_persisting(self):
+        with tempfile.TemporaryDirectory() as folder:
+            win = MainWindow()
+            # Pin a known default; set-top-level must leave it untouched
+            # (session-only, unlike the persistent default action).
+            win.settings.setValue("fs/home", "sentinel")
+            win._set_top_level(Path(folder))
+            self.assertEqual(
+                Path(win.fs_model.filePath(
+                    win.fs_proxy.mapToSource(win.fs_view.rootIndex()))),
+                Path(folder),
+            )
+            self.assertEqual(
+                win.settings.value("fs/home", "", str), "sentinel")
+            win.close()
 
     def test_set_music_home_persists_and_navigates(self):
         with tempfile.TemporaryDirectory() as folder:

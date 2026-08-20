@@ -6,6 +6,9 @@ heading, so an optional nickname in quotes lands in the title.
 
 ## [Unreleased]
 
+- Bulk metadata: "Protect track titles" checkbox (checked by default) guards against accidentally overwriting every selected track's title; uncheck to set all titles to one value.
+- File browser: "Set as top-level folder" on the folder right-click menu roots the pane there for the session only — the saved default music folder is untouched.
+
 ## [1.2.1] - 2026-08-19 "Headlong"
 
 - Packaging: the .deb now installs the desktop entry, app icon, and AppStream metadata (previously binary-only, so the app never appeared in the DE menu).
