@@ -6,6 +6,8 @@ heading, so an optional nickname in quotes lands in the title.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-19 "Headlong"
+
 - Accessibility: Line spacing setting (Appearance → Line spacing — Normal/Relaxed/Roomy/Spacious) scales list rows and wrapped dialog text.
 - Accessibility: Follow system theme (Appearance → Theme) — resolves to flat System Dark/System Light and tracks live light/dark flips.
 - Accessibility: full contrast audit — invisible text on menu selection/pressed states fixed in 11 light-accent themes, low-contrast placeholders fixed in 21; every text pair across all 38 themes is now WCAG-AA enforced by tests and `scripts/check_contrast.py`.
