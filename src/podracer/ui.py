@@ -524,17 +524,13 @@ class MainWindow(QMainWindow):
         self.lib_view.selectionModel().selectionChanged.connect(
             self._selection_changed
         )
-        self.lib_view.horizontalHeader().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.Stretch
-        )
-        for col in (1, 2):
-            self.lib_view.horizontalHeader().setSectionResizeMode(
-                col, QHeaderView.ResizeMode.ResizeToContents
-            )
-        self.lib_view.horizontalHeader().setSectionResizeMode(
-            3, QHeaderView.ResizeMode.Fixed
-        )
-        self.lib_view.setColumnWidth(3, 64)
+        header = self.lib_view.horizontalHeader()
+        # Every column is user-resizable, like the left pane. The first
+        # populated library load content-fits them as a starting point
+        # (see _fit_library_columns); drags take over from there.
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        header.setStretchLastSection(True)
+        self._lib_columns_fitted = False
 
         right_pane = QWidget(self)
         right_layout = QVBoxLayout(right_pane)
@@ -977,6 +973,12 @@ class MainWindow(QMainWindow):
 
     def _refresh_after_change(self) -> None:
         self.tracks_model.set_session(self.session)
+        # One-time starting layout: content-fit the columns on the
+        # first populated library, then hand sizing to the user.
+        if (not self._lib_columns_fitted and self.session is not None
+                and self.session.tracks):
+            self._fit_library_columns()
+            self._lib_columns_fitted = True
         if self.session is not None:
             self.device_label.setText(f"{self.session.device_name}")
             free = self.session.free_bytes()
@@ -995,6 +997,18 @@ class MainWindow(QMainWindow):
             self.backup_button.setEnabled(False)
             self.check_button.setEnabled(False)
             self.setWindowTitle("PodRacer")
+
+    def _fit_library_columns(self) -> None:
+        """Content-fit the library columns once as a starting layout.
+
+        Capped so one very long title cannot squeeze Artist/Album into
+        slivers; every column stays user-draggable from there.
+        """
+        header = self.lib_view.horizontalHeader()
+        self.lib_view.resizeColumnsToContents()
+        for col, cap in ((0, 360), (1, 200), (2, 200), (3, 64)):
+            if header.sectionSize(col) > cap:
+                header.resizeSection(col, cap)
 
     # -- filesystem pane -------------------------------------------------
 

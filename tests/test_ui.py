@@ -79,6 +79,28 @@ class _QtCase(unittest.TestCase):
             widget.deleteLater()
         self.app.processEvents()
 
+    def _make_window_with_session(self, count=1):
+        """A MainWindow with a real SyncSession on a synthetic device."""
+        from podracer import device
+        from podracer.sync import SyncSession
+
+        tmp = tempfile.TemporaryDirectory()
+        ipod_dir = Path(tmp.name) / "HYPERPINK"
+        (ipod_dir / "iPod_Control" / "iTunes").mkdir(parents=True)
+        (ipod_dir / "iPod_Control" / "Music").mkdir(parents=True)
+        (ipod_dir / "iPod_Control" / "iTunes" / "iTunesDB").write_bytes(
+            _synthetic_db_with_track(count)
+        )
+        ipod = device.IPod(
+            mountpoint=ipod_dir, label="HYPERPINK", block_device="sdb1",
+            guid="0011223344556677", serial="AB12CD34EF56",
+            family_id=12, db_version=3,
+        )
+        win = MainWindow()
+        win.session = SyncSession(ipod, sidecar=Path(tmp.name) / "lib.sqlite")
+        win.tracks_model.set_session(win.session)
+        return win, tmp
+
 
 class LibraryViewTests(_QtCase):
     def test_drop_emits_local_paths(self):
@@ -158,6 +180,44 @@ class LeftPaneTests(_QtCase):
                              QHeaderView.ResizeMode.Interactive, col)
         self.assertTrue(header.stretchLastSection())
         win.close()
+
+    def test_right_columns_user_resizable(self):
+        win = MainWindow()
+        header = win.lib_view.horizontalHeader()
+        for col in range(header.count()):
+            self.assertEqual(header.sectionResizeMode(col),
+                             QHeaderView.ResizeMode.Interactive, col)
+        self.assertTrue(header.stretchLastSection())
+        win.close()
+
+    def test_library_columns_content_fit_once(self):
+        win, tmp = self._make_window_with_session(count=2)
+        try:
+            win._refresh_after_change()
+            self.assertTrue(win._lib_columns_fitted)
+            header = win.lib_view.horizontalHeader()
+            self.assertGreater(header.sectionSize(0), 50)  # content-fitted
+            # One-time: a later refresh must not fight the user's drags.
+            header.resizeSection(0, 400)
+            win._refresh_after_change()
+            self.assertEqual(header.sectionSize(0), 400)
+        finally:
+            win.session.close()
+            win.close()
+            tmp.cleanup()
+
+    def test_library_columns_cap_long_titles(self):
+        win, tmp = self._make_window_with_session(count=2)
+        try:
+            win.session.tracks[0].title = "X" * 200
+            win._refresh_after_change()
+            self.assertTrue(win._lib_columns_fitted)
+            self.assertEqual(
+                win.lib_view.horizontalHeader().sectionSize(0), 360)
+        finally:
+            win.session.close()
+            win.close()
+            tmp.cleanup()
 
     def test_left_pane_multi_select_enabled(self):
         # The default selection mode is SingleSelection, which silently
@@ -255,27 +315,6 @@ class QuitGuardTests(_QtCase):
 
 class MetadataEditTests(_QtCase):
     """Tag editing: dialog prefill + dialog-free apply path."""
-
-    def _make_window_with_session(self, count=1):
-        from podracer import device
-        from podracer.sync import SyncSession
-
-        tmp = tempfile.TemporaryDirectory()
-        ipod_dir = Path(tmp.name) / "HYPERPINK"
-        (ipod_dir / "iPod_Control" / "iTunes").mkdir(parents=True)
-        (ipod_dir / "iPod_Control" / "Music").mkdir(parents=True)
-        (ipod_dir / "iPod_Control" / "iTunes" / "iTunesDB").write_bytes(
-            _synthetic_db_with_track(count)
-        )
-        ipod = device.IPod(
-            mountpoint=ipod_dir, label="HYPERPINK", block_device="sdb1",
-            guid="0011223344556677", serial="AB12CD34EF56",
-            family_id=12, db_version=3,
-        )
-        win = MainWindow()
-        win.session = SyncSession(ipod, sidecar=Path(tmp.name) / "lib.sqlite")
-        win.tracks_model.set_session(win.session)
-        return win, tmp
 
     def test_dialog_prefills_track_fields(self):
         win, tmp = self._make_window_with_session()
