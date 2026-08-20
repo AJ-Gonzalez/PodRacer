@@ -64,7 +64,7 @@ from .fonts import (
     apply_font,
     register_fonts,
 )
-from .icons import tinted_icon
+from .icons import menu_icon, tinted_icon
 from .pipeline import ACCEPTED_EXTENSIONS, AddResult, collect_audio
 from .sync import SyncSession
 from .themes import (
@@ -647,24 +647,31 @@ class MainWindow(QMainWindow):
         self._size_actions = []
         self._line_spacing_actions = []
         try:
-            menu_tint = self._current_theme().panel_text
+            theme = self._current_theme()
         except KeyError:
-            menu_tint = THEMES[0].panel_text
+            theme = THEMES[0]
+        panel_text = theme.panel_text
+        accent_text = theme.text_on_accent
 
         theme_menu = self.appearance_menu.addMenu("Theme")
-        theme_menu.setIcon(tinted_icon("palette", menu_tint))
+        theme_menu.setIcon(menu_icon("palette", panel_text, accent_text))
         self._system_theme_action = theme_menu.addAction(
             f"{SYSTEM_THEME}\t(Boring)"
         )
-        self._system_theme_action.setIcon(tinted_icon("monitor", menu_tint))
+        self._system_theme_action.setIcon(menu_icon(
+            "monitor", panel_text, accent_text,
+            checked=self._theme_name == SYSTEM_THEME,
+        ))
         self._system_theme_action.setCheckable(True)
         self._system_theme_action.setChecked(self._theme_name == SYSTEM_THEME)
         self._system_theme_action.triggered.connect(self._set_system_theme)
         theme_menu.addSeparator()
         for theme in THEMES:
             action = theme_menu.addAction(theme_label(theme))
-            action.setIcon(tinted_icon(
-                "moon" if is_dark(theme) else "sun", menu_tint
+            action.setIcon(menu_icon(
+                "moon" if is_dark(theme) else "sun",
+                panel_text, accent_text,
+                checked=theme.name == self._theme_name,
             ))
             action.setCheckable(True)
             action.setChecked(theme.name == self._theme_name)
@@ -674,7 +681,7 @@ class MainWindow(QMainWindow):
             self._theme_actions.append(action)
 
         font_menu = self.appearance_menu.addMenu("Font")
-        font_menu.setIcon(tinted_icon("type", menu_tint))
+        font_menu.setIcon(menu_icon("type", panel_text, accent_text))
         for label, family in FONT_OPTIONS:
             action = font_menu.addAction(label)
             action.setCheckable(True)
@@ -685,7 +692,7 @@ class MainWindow(QMainWindow):
             self._font_actions.append(action)
 
         size_menu = self.appearance_menu.addMenu("Font size")
-        size_menu.setIcon(tinted_icon("a-large-small", menu_tint))
+        size_menu.setIcon(menu_icon("a-large-small", panel_text, accent_text))
         for size in range(MIN_SIZE, MAX_SIZE + 1):
             action = size_menu.addAction(f"{size} pt")
             action.setCheckable(True)
@@ -696,7 +703,7 @@ class MainWindow(QMainWindow):
             self._size_actions.append(action)
 
         line_menu = self.appearance_menu.addMenu("Line spacing")
-        line_menu.setIcon(tinted_icon("rows-3", menu_tint))
+        line_menu.setIcon(menu_icon("rows-3", panel_text, accent_text))
         for label, factor in LINE_SPACINGS:
             action = line_menu.addAction(
                 f"{label} ({int(round(factor * 100))}%)"

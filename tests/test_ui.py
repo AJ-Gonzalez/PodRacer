@@ -22,7 +22,12 @@ from PySide6.QtWidgets import (
 
 from podracer_db.model import Track
 from podracer.fonts import FONT_OPTIONS, LINE_SPACINGS, MAX_SIZE, MIN_SIZE
-from podracer.themes import SYSTEM_THEME, THEMES, theme_label
+from podracer.themes import (
+    HIDDEN_THEMES,
+    SYSTEM_THEME,
+    THEMES,
+    theme_label,
+)
 from podracer.ui import (
     BulkMetadataDialog,
     LibraryView,
@@ -528,7 +533,7 @@ class AppearanceMenuTests(_QtCase):
         # While following, the rendered theme is always a real one and
         # the checkmark stays on the system action.
         self.assertIn(win._current_theme().name,
-                      [t.name for t in THEMES])
+                      [t.name for t in THEMES + HIDDEN_THEMES])
         checked = [a for a in win._theme_actions if a.isChecked()]
         self.assertEqual(checked, [])
         self.assertTrue(action.isChecked())

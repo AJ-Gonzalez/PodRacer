@@ -5,6 +5,7 @@ import unittest
 from PySide6.QtWidgets import QApplication
 
 from podracer.themes import (
+    HIDDEN_THEMES,
     SYSTEM_THEME,
     THEMES,
     Theme,
@@ -77,7 +78,34 @@ class PaletteTests(unittest.TestCase):
         # on a bundled one (offscreen reports Light/Unknown).
         self.assertNotIn(SYSTEM_THEME, [t.name for t in THEMES])
         resolved = system_resolved_theme()
-        self.assertIn(resolved, THEMES)
+        self.assertIn(resolved, THEMES + HIDDEN_THEMES)
+
+    def test_hidden_system_themes_are_flat_and_pass_contrast(self):
+        # The boring system themes are hidden from the menu but must
+        # hold the same contrast discipline as everything else, and
+        # identical gradient stops mean no sweeps anywhere.
+        for theme in HIDDEN_THEMES:
+            self.assertEqual(theme.window_gradient[0], theme.window_gradient[1],
+                             f"{theme.name} window gradient")
+            self.assertEqual(theme.header_gradient[0], theme.header_gradient[1],
+                             f"{theme.name} header gradient")
+            self.assertEqual(theme.button_to, theme.accent,
+                             f"{theme.name} button flat")
+            self.assertGreaterEqual(
+                contrast_ratio(theme.panel_text, theme.panel_bg), 4.5, theme.name
+            )
+            self.assertGreaterEqual(
+                contrast_ratio(theme.text_on_accent, theme.accent), 4.5, theme.name
+            )
+            self.assertGreaterEqual(
+                contrast_ratio(resolved_pressed(theme), theme.text_on_accent),
+                4.5, f"{theme.name} pressed",
+            )
+            for stop in theme.header_gradient:
+                self.assertGreaterEqual(
+                    contrast_ratio(stop, theme.header_text), 4.5,
+                    f"{theme.name} header {stop}",
+                )
 
 
 class ApplyThemeTests(unittest.TestCase):

@@ -1254,8 +1254,60 @@ def theme_by_name(name: str) -> Theme:
 # Sentinel theme-menu entry: not a real Theme, resolves at apply time.
 SYSTEM_THEME = "Follow system theme"
 
-# The neutral dark theme used when the system scheme is dark.
-_SYSTEM_DARK_THEME = "Grey Moonlight"
+
+def system_dark() -> Theme:
+    """System Dark: the flattest, most boring gray possible.
+
+    Hidden (not in the Theme menu): used only by Follow system theme
+    when the desktop is dark. Every gradient's stops are identical, so
+    the QSS paints solid color, not a sweep. Boring on purpose —
+    this is the palette that must never fight the user's wallpaper.
+    """
+    return Theme(
+        name="System Dark",
+        colors={"gray-1e": "#1e1e1e", "gray-26": "#262626",
+                "gray-2f": "#2f2f2f", "gray-3d": "#3d3d3d"},
+        window_gradient=("#1e1e1e", "#1e1e1e"),   # flat
+        accent="#3d3d3d",
+        accent2="#909090",                        # placeholder must read on #262626
+        panel_bg="#262626",
+        panel_text="#d4d4d4",
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#d4d4d4",
+        header_gradient=("#2f2f2f", "#2f2f2f"),   # flat
+        header_text="#d4d4d4",
+        button_to="#3d3d3d",                      # same as accent: flat button
+    )
+
+
+def system_light() -> Theme:
+    """System Light: the flattest, most boring gray possible.
+
+    Hidden, like System Dark. Same discipline: identical gradient
+    stops, gray-on-white, nothing that could clash with a wallpaper.
+    """
+    return Theme(
+        name="System Light",
+        colors={"gray-f0": "#f0f0f0", "gray-ff": "#ffffff",
+                "gray-e0": "#e0e0e0", "gray-b5": "#b5b5b5"},
+        window_gradient=("#f0f0f0", "#f0f0f0"),   # flat
+        accent="#b5b5b5",
+        accent2="#666666",                        # placeholder must read on #ffffff
+        panel_bg="#ffffff",
+        panel_text="#1a1a1a",
+        text_on_accent="#1a1a1a",
+        status_bg="rgba(0, 0, 0, 0.06)",
+        status_text="#1a1a1a",
+        header_gradient=("#e0e0e0", "#e0e0e0"),   # flat
+        header_text="#1a1a1a",
+        button_to="#b5b5b5",                      # same as accent: flat button
+    )
+
+
+SYSTEM_DARK_THEME = system_dark()
+SYSTEM_LIGHT_THEME = system_light()
+HIDDEN_THEMES = [SYSTEM_DARK_THEME, SYSTEM_LIGHT_THEME]
 
 
 def system_resolved_theme(app=None) -> Theme:
@@ -1269,6 +1321,6 @@ def system_resolved_theme(app=None) -> Theme:
     app = app or QApplication.instance()
     scheme = app.styleHints().colorScheme() if app is not None else Qt.ColorScheme.Unknown
     if scheme == Qt.ColorScheme.Dark:
-        return theme_by_name(_SYSTEM_DARK_THEME)
-    return THEMES[0]
+        return SYSTEM_DARK_THEME
+    return SYSTEM_LIGHT_THEME
 
