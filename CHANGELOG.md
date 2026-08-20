@@ -26,6 +26,7 @@ heading, so an optional nickname in quotes lands in the title.
 - New Computery Stuff themes: Kanagawa Terminal, Miasma Terminal, and Tokyo Night Terminal (palettes from terminalcolors.com), plus the flat Tokyo Night 2D. All WCAG AA verified.
 - New theme: XP Memories — Windows XP Luna (XP blue titlebar/buttons, beige window face, XP navy text, Bliss-sky backdrop). Retro Aesthetics category. WCAG AA verified.
 - Theme menu: each category (Classic, Psychonaut, Retro Aesthetics, ATLA, Computery Stuff, Flat) is now its own submenu instead of inline headers.
+- Theme menu: a pinned "Current: … (category)" line at the top shows the active theme and its category, so you never have to browse the submenus to find where you are.
 - New theme: Windows 95 — the classic face, flat (gray #c0c0c0 panels, navy #000080 titlebar/buttons, teal #008080 desktop backdrop, square buttons). WCAG AA verified.
 - New themes: Aqua-pilled and Aqua-Pilled Dark — the Aqua/Dark Aqua palettes with pill-shaped (capsule) buttons. Retro Aesthetics category.
 - New theme: Mac OS 9 — the Platinum design language (gray #ececec face, navy #000080 Finder selection/buttons, striped-titlebar header). Retro Aesthetics category.

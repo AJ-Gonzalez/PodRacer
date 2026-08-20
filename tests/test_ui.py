@@ -633,6 +633,21 @@ class AppearanceMenuTests(_QtCase):
         self.assertEqual(len(win._theme_actions), len(THEMES))
         win.close()
 
+    def test_theme_menu_pins_current_theme(self):
+        win = MainWindow()
+        theme_menu = win._theme_menu
+        first = theme_menu.actions()[0]
+        self.assertFalse(first.isEnabled())
+        self.assertTrue(first.text().startswith("Current: "))
+        current = win._current_theme()
+        self.assertIn(current.name, first.text())
+        self.assertIn(current.category, first.text())
+        # Switching themes re-pins the label.
+        win._apply_theme(THEMES[1])
+        second = win._theme_menu.actions()[0]
+        self.assertIn(THEMES[1].name, second.text())
+        win.close()
+
     def test_line_spacing_applies_and_checks(self):
         win = MainWindow()
         baseline = win.lib_view.verticalHeader().defaultSectionSize()

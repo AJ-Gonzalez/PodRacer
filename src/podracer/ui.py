@@ -702,6 +702,15 @@ class MainWindow(QMainWindow):
         self._theme_menu = self.appearance_menu.addMenu("Theme")
         theme_menu = self._theme_menu
         theme_menu.setIcon(menu_icon("palette", panel_text, accent_text))
+        # Pin the current theme + category at the very top so the user
+        # never has to browse the category submenus to find where they
+        # are.
+        current_label = theme_menu.addAction(self._current_theme_summary())
+        current_label.setEnabled(False)
+        font = current_label.font()
+        font.setBold(True)
+        current_label.setFont(font)
+        theme_menu.addSeparator()
         self._system_theme_action = theme_menu.addAction(
             f"{SYSTEM_THEME}\t(Boring)"
         )
@@ -804,6 +813,16 @@ class MainWindow(QMainWindow):
         if self._theme_name == SYSTEM_THEME:
             return system_resolved_theme()
         return theme_by_name(self._theme_name)
+
+    def _current_theme_summary(self) -> str:
+        """The 'Current: …' pin at the top of the Theme menu."""
+        try:
+            current = self._current_theme()
+        except KeyError:
+            return "Current: —"
+        if self._theme_name == SYSTEM_THEME:
+            return f"Current: Follow system theme ({current.name})"
+        return f"Current: {theme_label(current)} · {current.category}"
 
     def _set_system_theme(self) -> None:
         self._theme_name = SYSTEM_THEME
