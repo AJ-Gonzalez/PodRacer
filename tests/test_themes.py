@@ -75,6 +75,8 @@ class PaletteTests(unittest.TestCase):
                              f"{theme.name} header gradient")
             self.assertEqual(theme.button_to, theme.accent,
                              f"{theme.name} button flat")
+            self.assertEqual(theme.button_radius, 0,
+                             f"{theme.name} square button")
 
     def test_category_membership(self):
         # Pin the user's grouping so a future edit cannot silently
@@ -89,7 +91,7 @@ class PaletteTests(unittest.TestCase):
         )
         self.assertEqual(
             by_category["Computery Stuff"],
-            {"I know Kung Fu", "My name is Neo"},
+            {"I know Kung Fu", "My name is Neo", "Solarized Dark"},
         )
         self.assertEqual(
             by_category["Retro Aesthetics"],

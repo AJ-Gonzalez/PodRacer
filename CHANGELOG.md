@@ -18,6 +18,9 @@ heading, so an optional nickname in quotes lands in the title.
 - New theme: Human Dark — Hardy Heron's Human on dark-brown panels with the classic Ubuntu orange titlebar (#dd4814, darkened for AA). WCAG AA verified.
 - New theme menu category: Retro Aesthetics (Frutiger Aero, Aero at Night, Aqua, Dark Aqua, Human, Human Dark).
 - New flat themes: Lilac Love 2D (the Lilac Love palette, flattened) and Squished Forest (the Minty Forest palette, flattened — flat mint backdrop, flat deep-teal header). Both WCAG AA verified.
+- Flat themes now get square buttons (border-radius 0); every other theme keeps the rounded glossy buttons.
+- New theme: Solarized Dark — Ethan Schoonover's Solarized dark terminal palette (base03/base0/base02, cyan accent). Computery Stuff category. WCAG AA verified.
+- New theme: Machine in Motion — near-black steel with a red warning accent (palette #171717 #444444 #da0037 #ededed, colorhunt.co), flat with square buttons. WCAG AA verified.
 - Library: every song row now shows a small theme-tinted music note beside its title.
 
 ## [1.2.1] - 2026-08-19 "Headlong"

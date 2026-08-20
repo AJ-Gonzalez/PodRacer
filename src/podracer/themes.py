@@ -102,6 +102,7 @@ class Theme:
     hover_tint: str = ""                         # item hover wash
     alternate_tint: str = ""                     # row striping
     category: str = "Classic"                    # menu grouping header
+    button_radius: int = 6                       # px; Flat themes use 0 (square)
 
     def _role(self, value: str, default: str) -> str:
         return value or default
@@ -157,7 +158,7 @@ QPushButton {{
         stop:0 {self.accent}, stop:1 {button_to});
     color: {self.text_on_accent};
     border: 1px solid rgba(255, 255, 255, 0.30);
-    border-radius: 6px;
+    border-radius: {self.button_radius}px;
     padding: 4px 12px;
 }}
 QPushButton:hover {{ background: {rgba_of(self.accent, 0.85)}; }}
@@ -857,6 +858,7 @@ def lilac_love_2d() -> Theme:
         header_text="#ffffff",
         button_to="#810ca8",            # same as accent: flat button
         category="Flat",
+        button_radius=0,                # flat themes get square buttons
     )
 
 
@@ -915,6 +917,7 @@ def squished_forest() -> Theme:
         header_text="#ffffff",
         button_to="#1a312c",            # same as accent: flat button
         category="Flat",
+        button_radius=0,                # flat themes get square buttons
     )
 
 
@@ -1380,6 +1383,7 @@ def flat_sunrise() -> Theme:
         header_text="#1f2a38",
         button_to="#ed6663",            # same as accent: flat button
         category="Flat",
+        button_radius=0,                # flat themes get square buttons
     )
 
 
@@ -1407,6 +1411,7 @@ def dusk_flat() -> Theme:
         header_text="#e6edf5",
         button_to="#43658b",            # same as accent: flat button
         category="Flat",
+        button_radius=0,                # flat themes get square buttons
     )
 
 
@@ -1438,6 +1443,7 @@ def flat_earth() -> Theme:
         alternate_tint="rgba(165, 175, 121, 0.12)",  # olive stripe
         button_to="#827148",            # same as accent: flat button
         category="Flat",
+        button_radius=0,                # flat themes get square buttons
     )
 
 
@@ -1466,6 +1472,35 @@ def mint_at_night() -> Theme:
         header_text="#ffffff",
         button_to="#4c9c7e",            # same as accent: flat button
         category="Flat",
+        button_radius=0,                # flat themes get square buttons
+    )
+
+
+def machine_in_motion() -> Theme:
+    """Machine in Motion: near-black steel with a red warning accent.
+
+    Palette as given (#171717 #444444 #da0037 #ededed, colorhunt.co).
+    Near-black panels carry off-white text; the red is the accent and
+    the flat header; a mid-gray placeholder reads on the black. Flat:
+    identical gradient stops, button_to==accent, square buttons.
+    """
+    return Theme(
+        name="Machine in Motion",
+        colors={"black": "#171717", "gray": "#444444",
+                "red": "#da0037", "off-white": "#ededed"},
+        window_gradient=("#171717", "#171717"),   # flat
+        accent="#da0037",               # red: white text clears AA
+        accent2="#888888",              # mid gray: placeholder must read
+        panel_bg="#171717",             # near-black
+        panel_text="#ededed",           # off-white
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#ededed",
+        header_gradient=("#da0037", "#da0037"),   # flat red bar
+        header_text="#ffffff",
+        button_to="#da0037",            # same as accent: flat button
+        category="Flat",
+        button_radius=0,
     )
 
 
@@ -1546,6 +1581,40 @@ def my_name_is_neo() -> Theme:
     )
 
 
+def solarized_dark() -> Theme:
+    """Solarized Dark: Ethan Schoonover's Solarized dark terminal.
+
+    The official base palette: base03 #002b36 panels, base0 #839496
+    body text (4.75:1), base02/base1 header, cyan #2aa198 accent with
+    base03 text. The cyan is also the button's second stop: darkening
+    it drops below AA against the dark text, so the button stays flat.
+    """
+    return Theme(
+        name="Solarized Dark",
+        colors={
+            "base03": "#002b36", "base02": "#073642",
+            "base01": "#586e75", "base00": "#657b83",
+            "base0": "#839496", "base1": "#93a1a1",
+            "base2": "#eee8d5", "base3": "#fdf6e3",
+            "yellow": "#b58900", "orange": "#cb4b16", "red": "#dc322f",
+            "magenta": "#d33682", "violet": "#6c71c4",
+            "blue": "#268bd2", "cyan": "#2aa198", "green": "#859900",
+        },
+        window_gradient=("#002b36", "#073642"),
+        accent="#2aa198",               # cyan: base03 text clears AA (4.75)
+        accent2="#839496",              # base0: the body color as placeholder
+        panel_bg="#002b36",             # base03
+        panel_text="#839496",           # base0
+        text_on_accent="#002b36",       # base03
+        status_bg="rgba(0, 0, 0, 0.35)",
+        status_text="#839496",
+        header_gradient=("#073642", "#002b36"),   # base02 -> base03
+        header_text="#93a1a1",          # base1
+        button_to="#2aa198",            # cyan: darkening breaks AA with dark text
+        category="Computery Stuff",
+    )
+
+
 def give_me_the_night() -> Theme:
     """Give me the night: charcoal -> plum -> magenta night palette.
 
@@ -1620,6 +1689,7 @@ THEMES: list[Theme] = [
     # Computery Stuff
     i_know_kung_fu(),
     my_name_is_neo(),
+    solarized_dark(),
     # Flat
     flat_sunrise(),
     dusk_flat(),
@@ -1627,6 +1697,7 @@ THEMES: list[Theme] = [
     mint_at_night(),
     lilac_love_2d(),
     squished_forest(),
+    machine_in_motion(),
 ]
 
 
