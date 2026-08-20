@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
 
 from podracer_db.model import Track
 from podracer.fonts import FONT_OPTIONS, LINE_SPACINGS, MAX_SIZE, MIN_SIZE
-from podracer.themes import THEMES
+from podracer.themes import THEMES, theme_label
 from podracer.ui import (
     BulkMetadataDialog,
     LibraryView,
@@ -504,7 +504,14 @@ class AppearanceMenuTests(_QtCase):
         win._apply_theme(THEMES[1])
         checked = [a for a in win._theme_actions if a.isChecked()]
         self.assertEqual(len(checked), 1)
-        self.assertEqual(checked[0].text(), THEMES[1].name)
+        self.assertEqual(checked[0].text(), theme_label(THEMES[1]))
+        win.close()
+
+    def test_theme_menu_shows_dark_light_with_moon_sun(self):
+        win = MainWindow()
+        for action, theme in zip(win._theme_actions, THEMES):
+            self.assertEqual(action.text(), theme_label(theme))
+            self.assertFalse(action.icon().isNull())
         win.close()
 
     def test_size_action_applies_and_checks(self):

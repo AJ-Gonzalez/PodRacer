@@ -64,9 +64,10 @@ from .fonts import (
     apply_font,
     register_fonts,
 )
+from .icons import tinted_icon
 from .pipeline import ACCEPTED_EXTENSIONS, AddResult, collect_audio
 from .sync import SyncSession
-from .themes import THEMES, apply_theme
+from .themes import THEMES, apply_theme, is_dark, theme_by_name, theme_label
 from podracer_db.model import Track
 
 def _fmt_ms(ms: int) -> str:
@@ -605,6 +606,7 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.check_button)
         self.statusBar().addPermanentWidget(self.appearance_button)
         self._load_settings()
+        self._refresh_icons()
         # Font size stays one keystroke away even behind the menu.
         QShortcut(QKeySequence(QKeySequence.StandardKey.ZoomIn), self,
                   lambda: self._bump_font(1))
@@ -628,10 +630,17 @@ class MainWindow(QMainWindow):
         self._font_actions = []
         self._size_actions = []
         self._line_spacing_actions = []
+        try:
+            menu_tint = theme_by_name(self._theme_name).panel_text
+        except KeyError:
+            menu_tint = THEMES[0].panel_text
 
         theme_menu = self.appearance_menu.addMenu("Theme")
         for theme in THEMES:
-            action = theme_menu.addAction(theme.name)
+            action = theme_menu.addAction(theme_label(theme))
+            action.setIcon(tinted_icon(
+                "moon" if is_dark(theme) else "sun", menu_tint
+            ))
             action.setCheckable(True)
             action.setChecked(theme.name == self._theme_name)
             action.triggered.connect(
@@ -640,6 +649,7 @@ class MainWindow(QMainWindow):
             self._theme_actions.append(action)
 
         font_menu = self.appearance_menu.addMenu("Font")
+        font_menu.setIcon(tinted_icon("type", menu_tint))
         for label, family in FONT_OPTIONS:
             action = font_menu.addAction(label)
             action.setCheckable(True)
@@ -650,6 +660,7 @@ class MainWindow(QMainWindow):
             self._font_actions.append(action)
 
         size_menu = self.appearance_menu.addMenu("Font size")
+        size_menu.setIcon(tinted_icon("a-large-small", menu_tint))
         for size in range(MIN_SIZE, MAX_SIZE + 1):
             action = size_menu.addAction(f"{size} pt")
             action.setCheckable(True)
@@ -660,6 +671,7 @@ class MainWindow(QMainWindow):
             self._size_actions.append(action)
 
         line_menu = self.appearance_menu.addMenu("Line spacing")
+        line_menu.setIcon(tinted_icon("rows-3", menu_tint))
         for label, factor in LINE_SPACINGS:
             action = line_menu.addAction(
                 f"{label} ({int(round(factor * 100))}%)"
@@ -689,7 +701,31 @@ class MainWindow(QMainWindow):
         self._theme_name = theme.name
         self.settings.setValue("theme/name", theme.name)
         self._rebuild_appearance_menu()
+        self._refresh_icons()
         self._status(f"Theme: {theme.name}")
+
+    def _refresh_icons(self) -> None:
+        """Re-tint the status-bar/button icons for the current theme.
+
+        Buttons sit on the accent gradient, so their icons use
+        text_on_accent (the same AA-checked pair as the label text).
+        """
+        try:
+            theme = theme_by_name(self._theme_name)
+        except KeyError:
+            return
+        color = theme.text_on_accent
+        for button, name in (
+            (self.up_button, "arrow-up"),
+            (self.sync_button, "refresh-cw"),
+            (self.eject_button, "eject"),
+            (self.remove_button, "trash-2"),
+            (self.backup_button, "hard-drive-download"),
+            (self.check_button, "search-check"),
+            (self.cancel_button, "x"),
+            (self.appearance_button, "paintbrush"),
+        ):
+            button.setIcon(tinted_icon(name, color))
 
     def _apply_font_family(self, family: str) -> None:
         self._set_font(family, self._font_size)

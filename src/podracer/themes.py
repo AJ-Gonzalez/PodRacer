@@ -250,6 +250,21 @@ def button_gradient_stop(accent: str, text_on_accent: str) -> str:
     return pressed_color(accent, text_on_accent)
 
 
+def is_dark(theme: Theme) -> bool:
+    """Theme lean, based on the panel (background) luminance.
+
+    Threshold 0.35: Grey Moonlight (#131316) is dark, Zen Garden's
+    cream panels are light. Powers the moon/sun icons in the Theme
+    menu.
+    """
+    return relative_luminance(theme.panel_bg) < 0.35
+
+
+def theme_label(theme: Theme) -> str:
+    """Menu text: name plus the dark/light lean, e.g. 'Grey Moonlight (Dark)'."""
+    return f"{theme.name} ({'Dark' if is_dark(theme) else 'Light'})"
+
+
 def resolved_pressed(theme: Theme) -> str:
     """The pressed/checked background a theme actually renders with.
 
