@@ -6,6 +6,8 @@ heading, so an optional nickname in quotes lands in the title.
 
 ## [Unreleased]
 
+- macOS support: the app now runs on macOS (Apple Silicon verified). The device layer gained a DiskUtil transport (detection, auto-mount, eject, volume rename via diskutil + plistlib, no new dependencies) behind the same interface the Linux udisks2 transport uses, and the startup guard is platform-aware (ffmpeg hint says brew on macOS, the udisks2 check runs on Linux only). Verified against a nano 3G on an M1 Mac: detection, mount/unmount round trip, rename, DB write. A distributable .app bundle with codesign/notarization is the remaining tail.
+
 ## [1.3.0] - 2026-08-20 "Headlong"
 
 - Bulk metadata: "Protect track titles" checkbox (checked by default) guards against accidentally overwriting every selected track's title; uncheck to set all titles to one value.
