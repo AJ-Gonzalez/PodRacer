@@ -123,15 +123,30 @@ class DiskUtil:
         """
         info = disk_info(device)
         if not info.get("MountPoint"):
-            _run("mount", device)
+            try:
+                _run("mount", device)
+            except DeviceError:
+                # A slow mount can outlive the subprocess timeout and
+                # still land (diskarbitrationd completes on its own).
+                if not disk_info(device).get("MountPoint"):
+                    raise
             info = disk_info(device)
         return str(info.get("MountPoint") or "")
 
     def unmount(self, device: str) -> None:
-        """Unmount the volume (idempotent: already unmounted = done)."""
+        """Unmount the volume (idempotent: already unmounted = done).
+
+        The re-check mirrors mount(): a first unmount on a freshly
+        plugged volume (Spotlight/fseventsd writers active) can
+        outlive the subprocess timeout while the unmount lands.
+        """
         if not disk_info(device).get("MountPoint"):
             return
-        _run("unmount", device)
+        try:
+            _run("unmount", device)
+        except DeviceError:
+            if disk_info(device).get("MountPoint"):
+                raise
 
     def set_label(self, device: str, label: str) -> None:
         """Rename the filesystem volume label (FAT label for the iPod).

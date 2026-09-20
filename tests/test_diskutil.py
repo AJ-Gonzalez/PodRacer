@@ -274,6 +274,45 @@ class MountLifecycleTests(unittest.TestCase):
         self.t.unmount("disk8s1")  # mounted: unmount runs
         self.assertEqual(self.fake.count("unmount"), 1)
 
+    def test_unmount_timeout_that_still_lands_reads_as_success(self):
+        fake = _FakeDiskutil()
+
+        def run(*args):
+            if args[0] == "unmount":
+                fake.info["disk8s1"]["MountPoint"] = ""  # it landed
+                raise diskutil.DeviceError("unmount timed out")
+            return fake(*args)
+
+        with mock.patch.object(diskutil, "_run", run):
+            diskutil.DiskUtil().unmount("disk8s1")  # no raise
+
+    def test_mount_timeout_that_still_lands_reads_as_success(self):
+        fake = _FakeDiskutil()
+        fake.info["disk8s1"]["MountPoint"] = ""
+
+        def run(*args):
+            if args[0] == "mount":
+                fake.info["disk8s1"]["MountPoint"] = "/Volumes/HYPERPINK"
+                raise diskutil.DeviceError("mount timed out")
+            return fake(*args)
+
+        with mock.patch.object(diskutil, "_run", run):
+            self.assertEqual(
+                diskutil.DiskUtil().mount("disk8s1"), "/Volumes/HYPERPINK"
+            )
+
+    def test_unmount_failure_when_volume_still_mounted_raises(self):
+        fake = _FakeDiskutil()
+
+        def run(*args):
+            if args[0] == "unmount":
+                raise diskutil.DeviceError("unmount failed: in use")
+            return fake(*args)
+
+        with mock.patch.object(diskutil, "_run", run):
+            with self.assertRaises(diskutil.DeviceError):
+                diskutil.DiskUtil().unmount("disk8s1")
+
     def test_set_label_noop_on_same_name(self):
         self.t.set_label("disk8s1", "HYPERPINK")
         self.assertEqual(self.fake.count("rename"), 0)
