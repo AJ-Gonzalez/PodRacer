@@ -222,6 +222,74 @@ class LeftPaneTests(_QtCase):
         self.assertEqual(header.sectionSize(2), 250)
         win.close()
 
+    def _right_gap(self, view):
+        """Distance from the rightmost column's right edge to the
+        viewport's right edge; 0 means glued to the right side."""
+        header = (view.horizontalHeader()
+                  if hasattr(view, "horizontalHeader") else view.header())
+        count = header.count()
+        viewport = view.viewport().width()
+        return viewport - (
+            header.sectionViewportPosition(count - 1)
+            + header.sectionSize(count - 1)
+        )
+
+    def test_restored_widths_glue_last_column_to_the_edge(self):
+        # Regression (2026-09-20): saved widths are absolute px, and a
+        # window wider than they left a dead gap on the right (lib pane
+        # measured 260px). The last column of BOTH panes must absorb
+        # the remainder; earlier columns restore exactly.
+        self._clear_column_settings()
+        from PySide6.QtCore import QSettings
+        store = QSettings("PodRacer", "PodRacer")
+        store.setValue("columns/lib", [321, 100, 132, 222])
+        store.setValue("columns/fs", [280, 60, 90, 140])
+        win = MainWindow()
+        win.resize(1600, 900)
+        win.show()
+        self.app.processEvents()
+        self.app.processEvents()
+        try:
+            self.assertTrue(win._lib_columns_manual)
+            self._assert_glued(win)
+            for col, width in enumerate((321, 100, 132)):
+                self.assertEqual(
+                    win.lib_view.horizontalHeader().sectionSize(col), width,
+                    f"lib column {col} must restore exactly",
+                )
+            self.assertEqual(win.fs_view.header().sectionSize(0), 280)
+            # A later resize re-glues instead of freezing the gap.
+            win.resize(2000, 900)
+            self.app.processEvents()
+            self.app.processEvents()
+            self._assert_glued(win)
+        finally:
+            win.close()
+            self._clear_column_settings()
+
+    def test_user_drag_of_earlier_column_keeps_right_edge_glued(self):
+        self._clear_column_settings()
+        win = MainWindow()
+        win.resize(1600, 900)
+        win.show()
+        self.app.processEvents()
+        self.app.processEvents()
+        header = win.lib_view.horizontalHeader()
+        header.resizeSection(0, 300)   # simulates a user drag
+        self.assertTrue(win._lib_columns_manual)
+        self.app.processEvents()
+        self.app.processEvents()
+        try:
+            self.assertEqual(header.sectionSize(0), 300)
+            self.assertEqual(self._right_gap(win.lib_view), 0)
+        finally:
+            win.close()
+            self._clear_column_settings()
+
+    def _assert_glued(self, win):
+        self.assertEqual(self._right_gap(win.lib_view), 0, "lib pane")
+        self.assertEqual(self._right_gap(win.fs_view), 0, "fs pane")
+
     @staticmethod
     def _clear_column_settings():
         # MainWindow() restores saved widths in its constructor, so the

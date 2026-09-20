@@ -484,6 +484,7 @@ class MainWindow(QMainWindow):
         self.fs_view.setColumnWidth(1, 80)
         self.fs_view.setColumnWidth(2, 90)
         self.fs_view.setColumnWidth(3, 130)
+        self.fs_view.header().sectionResized.connect(self._on_fs_section_resized)
         # Right-click: send a folder to the iPod, or pin it as the
         # folder the app opens on (product tenet — no hunting for it).
         self.fs_view.setContextMenuPolicy(
@@ -565,6 +566,9 @@ class MainWindow(QMainWindow):
         self.splitter.addWidget(right_pane)
         self.splitter.setStretchFactor(0, 1)
         self.splitter.setStretchFactor(1, 2)
+        # Splitter drags resize the panes without a window resize;
+        # the column glue must follow them too.
+        self.splitter.splitterMoved.connect(self._on_splitter_moved)
         self.setCentralWidget(self.splitter)
 
         # -- status bar --------------------------------------------------
@@ -1058,7 +1062,13 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
+        self._glue_last_columns()
         if self._lib_columns_manual:
+            # Saved widths are absolute px; only the last column
+            # re-fits to the resized pane (restored-width gap bug).
+            # The event loop may still owe the panes their real widths
+            # (transitional first resize), so settle once more.
+            QTimer.singleShot(0, self._settle_lib_columns)
             return
         # Proportional defaults re-apply on every resize — the first
         # resizes carry transitional widths (seen: 100px before the
@@ -1068,9 +1078,47 @@ class MainWindow(QMainWindow):
         self._set_lib_column_defaults()
         QTimer.singleShot(0, self._settle_lib_columns)
 
+    def _glue_last_columns(self) -> None:
+        """The rightmost column of both panes ends at the viewport edge.
+
+        Restored widths are absolute px, so a wider window (or a
+        splitter drag) left a dead gap on the right; the fs pane's
+        stretch-last also failed to re-stretch through the restore
+        path. Gluing is explicit instead: the last column absorbs the
+        remainder — the fs date column already carried that job by
+        convention — while earlier columns keep their saved/default
+        sizes exactly. Dragging an earlier column re-glues live; a
+        drag of the last column itself is left alone until the next
+        window/splitter refit, because fighting the pointer is worse.
+        """
+        for view, header in (
+            (self.fs_view, self.fs_view.header()),
+            (self.lib_view, self.lib_view.horizontalHeader()),
+        ):
+            viewport = view.viewport().width()
+            count = header.count()
+            widths = [header.sectionSize(c) for c in range(count - 1)]
+            last = max(header.minimumSectionSize(), viewport - sum(widths))
+            self._apply_columns(header, widths + [last])
+
+    def _on_splitter_moved(self, *args) -> None:  # noqa: N802
+        # Splitter drags resize the panes without a window resize.
+        if not self._lib_columns_manual:
+            self._set_lib_column_defaults()
+        self._glue_last_columns()
+
+    def _on_fs_section_resized(self, index, *rest) -> None:  # noqa: N802
+        # The fs pane has no manual-freeze machinery; only re-glue when
+        # an earlier column's boundary moved (dragging the last column
+        # itself is left to the next re-fit, like the lib pane).
+        if not self._applying_columns \
+                and index < self.fs_view.header().count() - 1:
+            self._glue_last_columns()
+
     def _settle_lib_columns(self) -> None:
         if not self._lib_columns_manual:
             self._set_lib_column_defaults()
+        self._glue_last_columns()
 
     def _set_lib_column_defaults(self) -> None:
         """Title/Artist/Album 30% each, Time the remainder (10%).
@@ -1096,11 +1144,18 @@ class MainWindow(QMainWindow):
         finally:
             self._applying_columns = False
 
-    def _on_lib_section_resized(self, *args) -> None:  # noqa: N802
+    def _on_lib_section_resized(self, index, *rest) -> None:  # noqa: N802
         # Any user drag freezes the proportional default so the next
         # window resize does not clobber the user's layout.
-        if not self._applying_columns:
-            self._lib_columns_manual = True
+        if self._applying_columns:
+            return
+        self._lib_columns_manual = True
+        # Live-glue: dragging an earlier column's boundary moves the
+        # last column's width with it, so the right edge stays glued.
+        # Dragging the last column's own boundary is left alone — the
+        # next window/splitter refit re-glues it.
+        if index < self.lib_view.horizontalHeader().count() - 1:
+            self._glue_last_columns()
 
     def _save_column_widths(self) -> None:
         """Remember both panes' column widths for next launch."""
@@ -1116,7 +1171,13 @@ class MainWindow(QMainWindow):
         )
 
     def _restore_saved_column_widths(self) -> None:
-        """Apply persisted widths from the last run (absolute px)."""
+        """Apply persisted widths from the last run (absolute px).
+
+        The last column of each pane is glued to the viewport edge
+        right here: the saved first columns restore exactly, the last
+        absorbs the difference, so a launch into a window of a
+        different size never leaves a gap or an overflow.
+        """
         fs_header = self.fs_view.header()          # QTreeView: header()
         lib_header = self.lib_view.horizontalHeader()  # QTableView
         saved_fs = self.settings.value("columns/fs", [], list)
@@ -1126,6 +1187,7 @@ class MainWindow(QMainWindow):
         if _valid_widths(saved_lib, lib_header.count()):
             self._apply_columns(lib_header, [int(w) for w in saved_lib])
             self._lib_columns_manual = True
+        self._glue_last_columns()
 
     def _reset_column_widths(self) -> None:
         """Clear saved widths and restore both panes' defaults now."""
@@ -1134,6 +1196,7 @@ class MainWindow(QMainWindow):
         self._apply_columns(self.fs_view.header(), (280, 80, 90, 130))
         self._lib_columns_manual = False
         self._set_lib_column_defaults()
+        self._glue_last_columns()
         self._status("Column widths reset to defaults.")
 
     # -- filesystem pane -------------------------------------------------

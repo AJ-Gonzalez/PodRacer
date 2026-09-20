@@ -6,6 +6,7 @@ heading, so an optional nickname in quotes lands in the title.
 
 ## [Unreleased]
 
+- Layout: the rightmost column of both panes (library table and file browser) is now glued to the right edge. Restored column widths are absolute px, so a window or pane wider than they left a dead gap on the right; the last column now absorbs the remainder on launch, window resizes, splitter moves, and drags of earlier columns. Not macOS-specific: any resize-larger after saving widths hit it.
 - New theme: Workplace Violet — the colorhunt palette (#eeeeee #d8cbbb #bb8fa9 #560764) flattened: solid taupe workspace, light-gray panels, deep-violet accent and header, square buttons, Flat category. Placeholder mauve darkened to clear AA on the light panel (5.3:1). WCAG AA verified.
 - macOS: the app now builds as a self-contained PodRacer.app (PyInstaller onedir, committed spec, ad-hoc signed via scripts/build_app.sh). Personal-use distribution; a Developer ID build + notarization remains open for public release.
 - macOS support: the app now runs on macOS (Apple Silicon verified). The device layer gained a DiskUtil transport (detection, auto-mount, eject, volume rename via diskutil + plistlib, no new dependencies) behind the same interface the Linux udisks2 transport uses, and the startup guard is platform-aware (ffmpeg hint says brew on macOS, the udisks2 check runs on Linux only). Verified against a nano 3G on an M1 Mac: detection, mount/unmount round trip, rename, DB write. A distributable .app bundle with codesign/notarization is the remaining tail.
