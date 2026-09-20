@@ -36,23 +36,32 @@ def icon_path(name: str) -> Path:
     return Path(__file__).resolve().parent / "assets" / "icons" / f"{name}.svg"
 
 
-def _tinted_pixmap(name: str, color: str, size: int) -> QPixmap:
-    """Render the SVG once, recolor every opaque pixel with `color`."""
+def _tinted_pixmap(name: str, color: str, size: int,
+                   dpr: float | None = None) -> QPixmap:
+    """Render the SVG once, recolor every opaque pixel with `color`.
+
+    The painter on a dpr-marked pixmap works in LOGICAL units, so the
+    SVG must fill the logical rect, not the device-pixel one: feeding
+    it `px` renders the glyph at dpr times its size and a Retina
+    screen crops it to a quarter (2026-09-20). @dpr is injectable for
+    tests; None reads the screen.
+    """
     path = icon_path(name)
     if not path.is_file():
         return QPixmap()
-    app = QApplication.instance()
-    screen = app.primaryScreen() if app is not None else None
-    dpr = screen.devicePixelRatio() if screen is not None else 1.0
+    if dpr is None:
+        app = QApplication.instance()
+        screen = app.primaryScreen() if app is not None else None
+        dpr = screen.devicePixelRatio() if screen is not None else 1.0
     px = int(size * dpr)
     pm = QPixmap(px, px)
     pm.setDevicePixelRatio(dpr)
     pm.fill(Qt.GlobalColor.transparent)
     painter = QPainter(pm)
     renderer = QSvgRenderer(str(path))
-    renderer.render(painter, QRectF(0, 0, px, px))
+    renderer.render(painter, QRectF(0, 0, size, size))
     painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-    _ = painter.fillRect(pm.rect(), QColor(color))
+    _ = painter.fillRect(0, 0, size, size, QColor(color))
     painter.end()
     return pm
 

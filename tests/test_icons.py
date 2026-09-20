@@ -72,6 +72,54 @@ class TintedIconTests(unittest.TestCase):
         self.assertEqual(_opaque_colors(icon, QIcon.Mode.Normal),
                          {(0, 0, 255)})
 
+    def test_tinted_pixmap_glyph_fills_logical_box(self):
+        # Regression (2026-09-20): the SVG must fill the LOGICAL box of
+        # a dpr-marked pixmap. Feeding it the device-pixel rect drew
+        # the glyph at dpr times its size, so a Retina screen showed
+        # one cropped quarter. Invariant checked: the dpr-2 render is
+        # the SAME glyph as the dpr-1 render (downscaled to the same
+        # resolution), not a 2x crop of it. A marker glyph whose
+        # top-left quadrant differs from the whole glyph (a circle)
+        # discriminates: the old bug disagreed on ~3/4 of the canvas.
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+
+        from podracer import icons
+
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"'
+            ' fill="none" stroke="#000" stroke-width="6">'
+            '<circle cx="12" cy="12" r="9"/></svg>'
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            svg_path = Path(tmp) / "marker.svg"
+            svg_path.write_text(svg)
+            with mock.patch.object(icons, "icon_path", return_value=svg_path):
+                ref = icons._tinted_pixmap("marker", "#000000", 16, dpr=1.0)
+                ref = ref.toImage().convertToFormat(
+                    QImage.Format.Format_ARGB32
+                )
+                hidpi = icons._tinted_pixmap("marker", "#000000", 16, dpr=2.0)
+                self.assertEqual(hidpi.devicePixelRatio(), 2.0)
+                img = hidpi.toImage().convertToFormat(
+                    QImage.Format.Format_ARGB32
+                ).scaled(16, 16)  # smooth downscale to the 1x resolution
+                self.assertEqual(img.size(), ref.size())
+                disagree = sum(
+                    1
+                    for y in range(16)
+                    for x in range(16)
+                    if (img.pixelColor(x, y).alpha() > 128)
+                    != (ref.pixelColor(x, y).alpha() > 128)
+                )
+                # Measured on this stack: the same glyph at two
+                # densities disagrees on ~19 of 256 pixels (downscale
+                # antialiasing vs native 1x); the 2x-crop bug on ~149.
+                # Threshold 45 sits between with margin on both sides.
+                self.assertLessEqual(disagree, 45)
+
 
 if __name__ == "__main__":
     unittest.main()
+
