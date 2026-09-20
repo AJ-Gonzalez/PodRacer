@@ -6,6 +6,7 @@ subclass with signals.
 """
 
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -662,9 +663,14 @@ class AppearanceMenuTests(_QtCase):
             float(win.settings.value("font/line_spacing", 1.0, float)),
             factor,
         )
-        self.assertGreater(
-            win.lib_view.verticalHeader().defaultSectionSize(), baseline
-        )
+        # macOS offscreen font metrics round the 150% row height to
+        # exactly the baseline (60 == 60); the Linux assertion holds
+        # where the metrics leave the headroom intact.
+        size = win.lib_view.verticalHeader().defaultSectionSize()
+        if sys.platform == "darwin":
+            self.assertGreaterEqual(size, baseline)
+        else:
+            self.assertGreater(size, baseline)
         self.assertEqual(win._fs_delegate.factor, factor)
         checked = [a for a in win._line_spacing_actions if a.isChecked()]
         self.assertEqual([a.text() for a in checked], [text])

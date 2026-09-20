@@ -9,8 +9,6 @@ from __future__ import annotations
 
 import shutil
 import sys
-
-import sys
 from pathlib import Path
 
 from PySide6.QtCore import QTimer
@@ -27,7 +25,6 @@ def _icon_path() -> Path:
 # Absolute import: this file also runs as a bare script inside the
 # onefile bundle, where relative imports have no parent package.
 from podracer.themes import THEMES, apply_theme
-from podracer.udisks2 import UDisks2
 from podracer.ui import MainWindow
 
 
@@ -44,23 +41,33 @@ def main() -> int:
         app.setWindowIcon(QIcon(str(icon)))
 
     if not shutil.which("ffmpeg"):
+        # The Dependency UX item replaces these hardcoded hints with
+        # distro-aware ones; macOS brew is the known-good shortcut.
+        hint = ("brew install ffmpeg" if sys.platform == "darwin"
+                else "sudo zypper install ffmpeg")
         QMessageBox.critical(
             None, "PodRacer",
             "ffmpeg is not installed, so music cannot be copied or converted.\n"
-            "Install it with: sudo zypper install ffmpeg",
+            f"Install it with: {hint}",
         )
         return 1
-    # The device layer talks to the udisks2 daemon over D-Bus (no
-    # udisksctl binary). Smoke/demo modes never touch devices and must
-    # run on CI runners that do not have the daemon up.
-    if "--smoke" not in app.arguments() and "--demo" not in app.arguments() \
-            and not UDisks2().reachable():
-        QMessageBox.critical(
-            None, "PodRacer",
-            "udisks2 is not reachable, so the iPod cannot be mounted.\n"
-            "Install it with: sudo zypper install udisks2",
-        )
-        return 1
+    # On Linux the device layer talks to the udisks2 daemon over D-Bus
+    # (no udisksctl binary). macOS talks to the diskutil CLI instead,
+    # which is part of every install — nothing to check; Windows will
+    # poll drive letters the same way (same seam, no daemon either).
+    # Smoke/demo modes never touch devices and must run on CI runners
+    # that do not have the daemon up.
+    if sys.platform != "darwin" \
+            and "--smoke" not in app.arguments() \
+            and "--demo" not in app.arguments():
+        from podracer.udisks2 import UDisks2
+        if not UDisks2().reachable():
+            QMessageBox.critical(
+                None, "PodRacer",
+                "udisks2 is not reachable, so the iPod cannot be mounted.\n"
+                "Install it with: sudo zypper install udisks2",
+            )
+            return 1
 
     window = MainWindow()
     if "--demo" in app.arguments():

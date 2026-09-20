@@ -4,12 +4,14 @@ device tests use fake trees and injected lsblk JSON (no hardware).
 """
 
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
-from podracer import device, sysinfo
+from podracer import device, sysinfo, udisks2
+from podracer import diskutil
 
 RAW = Path(
     os.environ.get(
@@ -130,6 +132,8 @@ class DeviceTests(unittest.TestCase):
         self.assertEqual(device._parse_mountinfo(text, "/"), "sda2")
         self.assertIsNone(device._parse_mountinfo(text, "/mnt/nowhere"))
 
+    @unittest.skipUnless(sys.platform != "darwin",
+                         "mountinfo is the Linux block-device source")
     def test_block_device_for_uses_mountinfo(self):
         with mock.patch.object(
             device, "_mountinfo_device", return_value="sdb1"
@@ -166,11 +170,11 @@ class DeviceTests(unittest.TestCase):
             device.unmount_ipod(ipod)
         self.assertEqual(fake.unmounted, ["sdb1"])
 
-    def test_unmount_ipod_resolves_device_via_mountinfo(self):
+    def test_unmount_ipod_resolves_block_device(self):
         fake = FakeTransport()
         ipod = device.IPod(mountpoint=Path("/run/media/u/HYPERPINK"))
         with mock.patch.object(device, "_get_transport", return_value=fake), \
-             mock.patch.object(device, "_mountinfo_device",
+             mock.patch.object(device, "_block_device_for",
                                return_value="sdb1"):
             device.unmount_ipod(ipod)
         self.assertEqual(fake.unmounted, ["sdb1"])
@@ -179,7 +183,8 @@ class DeviceTests(unittest.TestCase):
         fake = FakeTransport()
         ipod = device.IPod(mountpoint=Path("/run/media/u/HYPERPINK"),
                            block_device="sdb1")
-        with mock.patch.object(device, "_get_transport", return_value=fake):
+        with mock.patch.object(device, "_get_transport", return_value=fake), \
+             mock.patch.object(diskutil, "mountpoint_for", return_value=None):
             device.rename_label(ipod, "STONER")
         self.assertEqual(fake.labels, [("sdb1", "STONER")])
 
@@ -187,8 +192,9 @@ class DeviceTests(unittest.TestCase):
         fake = FakeTransport()
         ipod = device.IPod(mountpoint=Path("/run/media/u/HYPERPINK"))
         with mock.patch.object(device, "_get_transport", return_value=fake), \
-             mock.patch.object(device, "_mountinfo_device",
-                               return_value="sdb1"):
+             mock.patch.object(device, "_block_device_for",
+                               return_value="sdb1"), \
+             mock.patch.object(diskutil, "mountpoint_for", return_value=None):
             device.rename_label(ipod, "STONER")
         self.assertEqual(ipod.block_device, "sdb1")
         self.assertEqual(fake.labels, [("sdb1", "STONER")])
@@ -244,6 +250,58 @@ class DeviceTests(unittest.TestCase):
             found = device.auto_mount()
             self.assertIs(found, mounted)
             mount.assert_called_once()
+
+
+class TransportDispatchTests(unittest.TestCase):
+    def setUp(self):
+        self._saved = device._transport
+        device._transport = None
+
+    def tearDown(self):
+        device._transport = self._saved
+
+    def test_darwin_uses_diskutil(self):
+        with mock.patch("sys.platform", "darwin"):
+            self.assertIsInstance(device._get_transport(), diskutil.DiskUtil)
+
+    def test_linux_uses_udisks2(self):
+        with mock.patch("sys.platform", "linux"):
+            self.assertIsInstance(device._get_transport(), udisks2.UDisks2)
+
+
+@unittest.skipUnless(sys.platform == "darwin", "macOS transport paths")
+class DarwinPathsTests(unittest.TestCase):
+    def test_media_root_is_volumes(self):
+        self.assertEqual(device._media_root(), Path("/Volumes"))
+
+    def test_block_device_for_uses_diskutil(self):
+        with mock.patch.object(diskutil, "device_for_mountpoint",
+                               return_value="disk8s1"):
+            self.assertEqual(
+                device._block_device_for(Path("/Volumes/HYPERPINK")),
+                "disk8s1",
+            )
+
+    def test_rename_label_refreshes_moved_mountpoint(self):
+        fake = FakeTransport()
+        ipod = device.IPod(mountpoint=Path("/Volumes/HYPERPINK"),
+                           block_device="disk8s1")
+        with mock.patch.object(device, "_get_transport", return_value=fake), \
+             mock.patch.object(diskutil, "mountpoint_for",
+                               return_value=Path("/Volumes/STONER")):
+            device.rename_label(ipod, "STONER")
+        self.assertEqual(ipod.block_device, "disk8s1")
+        self.assertEqual(ipod.mountpoint, Path("/Volumes/STONER"))
+        self.assertEqual(fake.labels, [("disk8s1", "STONER")])
+
+    def test_rename_label_keeps_mountpoint_when_volume_unmounts(self):
+        fake = FakeTransport()
+        ipod = device.IPod(mountpoint=Path("/Volumes/HYPERPINK"),
+                           block_device="disk8s1")
+        with mock.patch.object(device, "_get_transport", return_value=fake), \
+             mock.patch.object(diskutil, "mountpoint_for", return_value=None):
+            device.rename_label(ipod, "STONER")
+        self.assertEqual(ipod.mountpoint, Path("/Volumes/HYPERPINK"))
 
 
 if __name__ == "__main__":

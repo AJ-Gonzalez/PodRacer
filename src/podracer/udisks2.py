@@ -1,13 +1,14 @@
-"""udisks2 transport over D-Bus (QtDBus).
+"""udisks2 transport over D-Bus (QtDBus) — the Linux backend.
 
 device.py talks to the udisks2 daemon through this class instead of
 shelling out to udisksctl/lsblk: direct D-Bus works inside a Flatpak
 sandbox (with --socket=system-bus), on any init system, and on any
 distro that runs the udisks2 daemon. Only the manager, block, drive,
 and filesystem interfaces are used, with synchronous calls, so no
-event loop is needed beyond the app's own.
+event loop is needed beyond the app's own. On macOS the platform
+transport is diskutil.DiskUtil instead (same five-method protocol).
 
-Thin adapter on purpose: all interpretation (Apple vendor filter,
+Thin adapter on purpose: all interpretation (Apple-vendor filter,
 mountpoint matching) lives in device.py so tests can fake the
 transport without D-Bus.
 """
@@ -15,7 +16,6 @@ transport without D-Bus.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
 from pathlib import Path
 
 from PySide6.QtDBus import (
@@ -26,22 +26,11 @@ from PySide6.QtDBus import (
     QDBusObjectPath,
 )
 
+from .device import DeviceError, Partition
+
 SERVICE = "org.freedesktop.UDisks2"
 MANAGER_PATH = "/org/freedesktop/UDisks2"
 BLOCK_DEVICES = "/org/freedesktop/UDisks2/block_devices"
-
-
-class DeviceError(RuntimeError):
-    """The iPod could not be detected, mounted, or read."""
-
-
-@dataclass
-class Partition:
-    """One block device as seen through udisks2."""
-
-    device: str
-    label: str
-    vendor: str
 
 
 def _interface(object_path: str, interface: str) -> QDBusInterface:
