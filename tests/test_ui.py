@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from podracer_db.model import Track
 from podracer.fonts import FONT_OPTIONS, LINE_SPACINGS, MAX_SIZE, MIN_SIZE
+from podracer.settings_store import app_settings
 from podracer.themes import (
     HIDDEN_THEMES,
     SYSTEM_THEME,
@@ -216,10 +217,19 @@ class LeftPaneTests(_QtCase):
         self.assertFalse(win._lib_columns_manual)
         header.resizeSection(2, 250)   # simulates a user drag
         self.assertTrue(win._lib_columns_manual)
-        # A later window resize must not clobber the user's drag.
+        shape_before = win._snapshot(header)
+        # A later window resize must not clobber the user's layout:
+        # refit scales the saved shape, preserving every ratio.
         win.resize(1000, 600)
         self.app.processEvents()
-        self.assertEqual(header.sectionSize(2), 250)
+        width = win.lib_view.viewport().width()
+        for col, before in enumerate(shape_before):
+            self.assertAlmostEqual(
+                header.sectionSize(col) / width,
+                before / sum(shape_before),
+                delta=0.02,
+                msg=col,
+            )
         win.close()
 
     def _right_gap(self, view):
@@ -234,14 +244,14 @@ class LeftPaneTests(_QtCase):
             + header.sectionSize(count - 1)
         )
 
-    def test_restored_widths_glue_last_column_to_the_edge(self):
+    def test_restored_shape_scales_and_glues_last_column(self):
         # Regression (2026-09-20): saved widths are absolute px, and a
         # window wider than they left a dead gap on the right (lib pane
-        # measured 260px). The last column of BOTH panes must absorb
-        # the remainder; earlier columns restore exactly.
+        # measured 260px). Shapes restore as RATIOS scaled to the
+        # viewport: every column keeps its proportion and the last
+        # column of BOTH panes absorbs the remainder, so no gap.
         self._clear_column_settings()
-        from PySide6.QtCore import QSettings
-        store = QSettings("PodRacer", "PodRacer")
+        store = app_settings()
         store.setValue("columns/lib", [321, 100, 132, 222])
         store.setValue("columns/fs", [280, 60, 90, 140])
         win = MainWindow()
@@ -251,18 +261,41 @@ class LeftPaneTests(_QtCase):
         self.app.processEvents()
         try:
             self.assertTrue(win._lib_columns_manual)
+            self.assertTrue(win._fs_columns_manual)
             self._assert_glued(win)
-            for col, width in enumerate((321, 100, 132)):
-                self.assertEqual(
-                    win.lib_view.horizontalHeader().sectionSize(col), width,
-                    f"lib column {col} must restore exactly",
+            saved_total = sum((321, 100, 132, 222))
+            header = win.lib_view.horizontalHeader()
+            width = win.lib_view.viewport().width()
+            for col, saved in enumerate((321, 100, 132, 222)):
+                self.assertAlmostEqual(
+                    header.sectionSize(col) / width, saved / saved_total,
+                    delta=0.02, msg=f"lib column {col} ratio",
                 )
-            self.assertEqual(win.fs_view.header().sectionSize(0), 280)
-            # A later resize re-glues instead of freezing the gap.
+            # A later resize re-scales the shape instead of freezing.
             win.resize(2000, 900)
             self.app.processEvents()
             self.app.processEvents()
             self._assert_glued(win)
+        finally:
+            win.close()
+            self._clear_column_settings()
+
+    def test_fs_default_columns_fill_the_pane(self):
+        self._clear_column_settings()
+        win = MainWindow()
+        win.resize(900, 600)
+        win.show()
+        self.app.processEvents()
+        self.app.processEvents()
+        try:
+            header = win.fs_view.header()
+            width = win.fs_view.viewport().width()
+            for col, frac in enumerate((0.45, 0.15, 0.15, 0.25)):
+                self.assertAlmostEqual(
+                    header.sectionSize(col) / width, frac, delta=0.02,
+                    msg=col,
+                )
+            self.assertEqual(self._right_gap(win.fs_view), 0)
         finally:
             win.close()
             self._clear_column_settings()
@@ -293,12 +326,11 @@ class LeftPaneTests(_QtCase):
     @staticmethod
     def _clear_column_settings():
         # MainWindow() restores saved widths in its constructor, so the
-        # keys must be cleared before the window exists. QSettings
-        # resolves to a process-wide store, so a standalone instance
-        # reaches the same file the windows use.
-        from PySide6.QtCore import QSettings
-        QSettings("PodRacer", "PodRacer").remove("columns/lib")
-        QSettings("PodRacer", "PodRacer").remove("columns/fs")
+        # keys must be cleared before the window exists. app_settings()
+        # resolves to the redirected XDG store, so a standalone
+        # instance reaches the same file the windows use.
+        app_settings().remove("columns/lib")
+        app_settings().remove("columns/fs")
 
     def test_library_default_columns_are_percentages(self):
         self._clear_column_settings()
@@ -316,6 +348,7 @@ class LeftPaneTests(_QtCase):
             win.close()
 
     def test_column_widths_persist_across_windows(self):
+        self._clear_column_settings()
         win = MainWindow()
         win.resize(900, 600)
         win.lib_view.horizontalHeader().resizeSection(0, 321)
@@ -323,11 +356,26 @@ class LeftPaneTests(_QtCase):
         win._save_column_widths()
         win.close()
         win2 = MainWindow()   # restores saved widths in its constructor
-        self.assertEqual(
-            win2.lib_view.horizontalHeader().sectionSize(0), 321)
-        self.assertEqual(
-            win2.fs_view.header().sectionSize(1), 177)
+        # Shapes persist as ratios: the second window's widths match
+        # proportionally (its viewport may differ from the first's).
+        lib_header = win2.lib_view.horizontalHeader()
+        saved = win2.settings.value("columns/lib", [], list)
+        saved_total = sum(int(w) for w in saved)
+        self.assertAlmostEqual(
+            lib_header.sectionSize(0) / sum(
+                lib_header.sectionSize(c) for c in range(4)),
+            int(saved[0]) / saved_total,
+            delta=0.02,
+        )
+        self.assertAlmostEqual(
+            win2.fs_view.header().sectionSize(1) / sum(
+                win2.fs_view.header().sectionSize(c) for c in range(4)),
+            int(win2.settings.value("columns/fs", [], list)[1])
+            / sum(int(w) for w in win2.settings.value("columns/fs", [], list)),
+            delta=0.02,
+        )
         win2.close()
+        self._clear_column_settings()
 
     def test_reset_column_widths_restores_defaults_and_clears_saved(self):
         win = MainWindow()
@@ -342,8 +390,11 @@ class LeftPaneTests(_QtCase):
         win.fs_view.header().resizeSection(1, 177)
         win._save_column_widths()
         win._reset_column_widths()
-        self.assertEqual(lib_header.sectionSize(0), int(width * 0.30))
-        self.assertEqual(win.fs_view.header().sectionSize(1), 80)
+        self.assertAlmostEqual(
+            lib_header.sectionSize(0) / width, 0.30, delta=0.02)
+        self.assertAlmostEqual(
+            win.fs_view.header().sectionSize(1)
+            / win.fs_view.viewport().width(), 0.15, delta=0.02)
         self.assertEqual(win.settings.value("columns/fs", [], list), [])
         self.assertEqual(win.settings.value("columns/lib", [], list), [])
         win.close()

@@ -23,7 +23,6 @@ from PySide6.QtGui import QFontMetrics, QIcon, QKeySequence, QShortcut
 from PySide6.QtCore import (
     QAbstractTableModel,
     QModelIndex,
-    QSettings,
     QSize,
     QSortFilterProxyModel,
     Qt,
@@ -66,6 +65,7 @@ from .fonts import (
     register_fonts,
 )
 from .icons import menu_icon, tinted_icon
+from .settings_store import app_settings
 from .pipeline import ACCEPTED_EXTENSIONS, AddResult, collect_audio
 from .sync import SyncSession
 from .themes import (
@@ -449,7 +449,7 @@ class MainWindow(QMainWindow):
         # True while the in-memory library differs from what is on the
         # device (adds/deletes since the last Sync / Sync & Eject).
         self._dirty = False
-        self.settings = QSettings("PodRacer", "PodRacer")
+        self.settings = app_settings()
 
         # -- left pane: filesystem -------------------------------------
         # The app starts on the saved music home (right-click a folder
@@ -479,11 +479,12 @@ class MainWindow(QMainWindow):
         # All columns manually resizable (no Stretch lock); the date
         # column absorbs leftover space instead.
         self.fs_view.header().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        self.fs_view.header().setStretchLastSection(True)
         self.fs_view.setColumnWidth(0, 280)
         self.fs_view.setColumnWidth(1, 80)
         self.fs_view.setColumnWidth(2, 90)
         self.fs_view.setColumnWidth(3, 130)
+        self._fs_columns_manual = False
+        self._saved_fs: list[int] | None = None
         self.fs_view.header().sectionResized.connect(self._on_fs_section_resized)
         # Right-click: send a folder to the iPod, or pin it as the
         # folder the app opens on (product tenet — no hunting for it).
@@ -545,13 +546,14 @@ class MainWindow(QMainWindow):
         )
         header = self.lib_view.horizontalHeader()
         # Every column is user-resizable, like the left pane. Widths
-        # persist across launches; without saved widths the right pane
-        # falls back to 30/30/30/10 proportional defaults that track
-        # window resizes until the user drags a column. No stretch
-        # section (see _set_lib_column_defaults).
+        # persist as shapes (ratios) across launches; without one the
+        # pane falls back to its proportional defaults (see
+        # _refit_header). No stretch section: the refit owns the last
+        # column's width.
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self._applying_columns = False
         self._lib_columns_manual = False
+        self._saved_lib: list[int] | None = None
         self._restore_saved_column_widths()
         header.sectionResized.connect(self._on_lib_section_resized)
 
@@ -1062,34 +1064,58 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
-        self._glue_last_columns()
-        if self._lib_columns_manual:
-            # Saved widths are absolute px; only the last column
-            # re-fits to the resized pane (restored-width gap bug).
-            # The event loop may still owe the panes their real widths
-            # (transitional first resize), so settle once more.
-            QTimer.singleShot(0, self._settle_lib_columns)
-            return
-        # Proportional defaults re-apply on every resize — the first
-        # resizes carry transitional widths (seen: 100px before the
-        # real one), and layout can finish without a further resize.
-        # So re-apply now AND once the event loop catches up; both are
-        # idempotent, and a user drag freezes the layout.
-        self._set_lib_column_defaults()
-        QTimer.singleShot(0, self._settle_lib_columns)
+        self._refit_panes()
+        # The event loop may still owe the panes their real widths
+        # (transitional first resizes, seen: 100px before the real
+        # one); refit is idempotent, so settle again once it catches
+        # up. Refits preserve the user's shape either way.
+        QTimer.singleShot(0, self._refit_panes)
 
-    def _glue_last_columns(self) -> None:
-        """The rightmost column of both panes ends at the viewport edge.
+    # Column shapes: the widths a pane's layout is built from. A pane
+    # with a saved shape (user dragged it) refits by scaling that
+    # shape; an untouched pane refits from its proportional defaults.
+    FS_COLUMN_FRACTIONS = (0.45, 0.15, 0.15, 0.25)   # name/size/type/date
+    LIB_COLUMN_FRACTIONS = (0.30, 0.30, 0.30, 0.10)
+
+    def _refit_panes(self) -> None:
+        """Auto-fill both panes; the rightmost column ends at the edge.
 
         Restored widths are absolute px, so a wider window (or a
-        splitter drag) left a dead gap on the right; the fs pane's
-        stretch-last also failed to re-stretch through the restore
-        path. Gluing is explicit instead: the last column absorbs the
-        remainder — the fs date column already carried that job by
-        convention — while earlier columns keep their saved/default
-        sizes exactly. Dragging an earlier column re-glues live; a
-        drag of the last column itself is left alone until the next
-        window/splitter refit, because fighting the pointer is worse.
+        splitter drag) left a dead gap on the right. Refitting scales
+        each pane's shape to its viewport and makes the last column
+        absorb the remainder, which also keeps the user's proportions
+        instead of a px-frozen layout (drags glue instead, see
+        _glue_last_columns, so an active drag never rescales).
+        """
+        self._refit_header(
+            self.fs_view, self.fs_view.header(),
+            self._saved_fs, self.FS_COLUMN_FRACTIONS,
+        )
+        self._refit_header(
+            self.lib_view, self.lib_view.horizontalHeader(),
+            self._saved_lib if self._lib_columns_manual else None,
+            self.LIB_COLUMN_FRACTIONS,
+        )
+
+    def _refit_header(self, view, header, shape, fractions) -> None:
+        viewport = view.viewport().width()
+        count = header.count()
+        if shape is None:
+            widths = [int(viewport * f) for f in fractions]
+        else:
+            total = sum(shape)
+            scale = viewport / total if total else 1.0
+            widths = [round(w * scale) for w in shape]
+        widths[-1] = max(header.minimumSectionSize(), viewport - sum(widths[:-1]))
+        self._apply_columns(header, widths)
+
+    def _glue_last_columns(self) -> None:
+        """Absorb the boundary change into each pane's last column.
+
+        The drag path: the user moved one column's width; everything
+        else keeps its size and the rightmost column takes the
+        difference, so the right edge stays glued without rescaling
+        the layout the user is actively shaping.
         """
         for view, header in (
             (self.fs_view, self.fs_view.header()),
@@ -1103,36 +1129,23 @@ class MainWindow(QMainWindow):
 
     def _on_splitter_moved(self, *args) -> None:  # noqa: N802
         # Splitter drags resize the panes without a window resize.
-        if not self._lib_columns_manual:
-            self._set_lib_column_defaults()
-        self._glue_last_columns()
+        self._refit_panes()
 
     def _on_fs_section_resized(self, index, *rest) -> None:  # noqa: N802
-        # The fs pane has no manual-freeze machinery; only re-glue when
-        # an earlier column's boundary moved (dragging the last column
-        # itself is left to the next re-fit, like the lib pane).
-        if not self._applying_columns \
-                and index < self.fs_view.header().count() - 1:
-            self._glue_last_columns()
-
-    def _settle_lib_columns(self) -> None:
-        if not self._lib_columns_manual:
-            self._set_lib_column_defaults()
+        # A drag changes one boundary; the last column absorbs it and
+        # the resulting shape is snapshotted for later scaled refits.
+        # Noise on the last column itself is ignored (see the lib
+        # handler) — dragging the last column is left to the next
+        # window/splitter refit.
+        if self._applying_columns \
+                or index >= self.fs_view.header().count() - 1:
+            return
+        self._fs_columns_manual = True
         self._glue_last_columns()
+        self._saved_fs = self._snapshot(self.fs_view.header())
 
-    def _set_lib_column_defaults(self) -> None:
-        """Title/Artist/Album 30% each, Time the remainder (10%).
-
-        Time absorbs the rounding so the four columns sum exactly to
-        the viewport width; the pane keeps no stretch section, which
-        would auto-resize Time and trip the drag-freeze detector.
-        """
-        width = self.lib_view.viewport().width()
-        title = int(width * 0.30)
-        self._apply_columns(
-            self.lib_view.horizontalHeader(),
-            [title, title, title, width - 3 * title],
-        )
+    def _snapshot(self, header) -> list[int]:
+        return [header.sectionSize(c) for c in range(header.count())]
 
     def _apply_columns(self, header, widths) -> None:
         """Programmatic column resize; guarded so the sectionResized
@@ -1145,17 +1158,17 @@ class MainWindow(QMainWindow):
             self._applying_columns = False
 
     def _on_lib_section_resized(self, index, *rest) -> None:  # noqa: N802
-        # Any user drag freezes the proportional default so the next
-        # window resize does not clobber the user's layout.
+        # A drag changes one boundary; the last column absorbs it so
+        # the right edge stays glued, and the resulting shape is
+        # snapshotted for later (scaled) refits. A drag of the last
+        # column's own boundary is not re-fit live (fighting the
+        # pointer is worse); the shape still adopts it on the next
+        # window/splitter refit.
         if self._applying_columns:
             return
         self._lib_columns_manual = True
-        # Live-glue: dragging an earlier column's boundary moves the
-        # last column's width with it, so the right edge stays glued.
-        # Dragging the last column's own boundary is left alone — the
-        # next window/splitter refit re-glues it.
-        if index < self.lib_view.horizontalHeader().count() - 1:
-            self._glue_last_columns()
+        self._glue_last_columns()
+        self._saved_lib = self._snapshot(self.lib_view.horizontalHeader())
 
     def _save_column_widths(self) -> None:
         """Remember both panes' column widths for next launch."""
@@ -1171,32 +1184,34 @@ class MainWindow(QMainWindow):
         )
 
     def _restore_saved_column_widths(self) -> None:
-        """Apply persisted widths from the last run (absolute px).
+        """Adopt persisted widths (absolute px) as each pane's shape.
 
-        The last column of each pane is glued to the viewport edge
-        right here: the saved first columns restore exactly, the last
-        absorbs the difference, so a launch into a window of a
-        different size never leaves a gap or an overflow.
+        Shapes are scaled to the current viewport at refit time (see
+        _refit_panes), so a launch into a window of a different size
+        keeps the user's proportions and glues the last column.
         """
         fs_header = self.fs_view.header()          # QTreeView: header()
         lib_header = self.lib_view.horizontalHeader()  # QTableView
         saved_fs = self.settings.value("columns/fs", [], list)
         if _valid_widths(saved_fs, fs_header.count()):
-            self._apply_columns(fs_header, [int(w) for w in saved_fs])
+            self._saved_fs = [int(w) for w in saved_fs]
+            self._apply_columns(fs_header, self._saved_fs)
+            self._fs_columns_manual = True
         saved_lib = self.settings.value("columns/lib", [], list)
         if _valid_widths(saved_lib, lib_header.count()):
-            self._apply_columns(lib_header, [int(w) for w in saved_lib])
+            self._saved_lib = [int(w) for w in saved_lib]
+            self._apply_columns(lib_header, self._saved_lib)
             self._lib_columns_manual = True
-        self._glue_last_columns()
 
     def _reset_column_widths(self) -> None:
-        """Clear saved widths and restore both panes' defaults now."""
+        """Clear saved shapes and restore both panes' defaults now."""
         self.settings.remove("columns/fs")
         self.settings.remove("columns/lib")
-        self._apply_columns(self.fs_view.header(), (280, 80, 90, 130))
+        self._saved_fs = None
+        self._saved_lib = None
+        self._fs_columns_manual = False
         self._lib_columns_manual = False
-        self._set_lib_column_defaults()
-        self._glue_last_columns()
+        self._refit_panes()
         self._status("Column widths reset to defaults.")
 
     # -- filesystem pane -------------------------------------------------

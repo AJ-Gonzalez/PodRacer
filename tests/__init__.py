@@ -6,8 +6,18 @@ layout without PYTHONPATH gymnastics. The codec lives in its own
 package tree (packages/podracer_db/src); the app stays in src/.
 """
 
+import os
 import sys
+import tempfile
 from pathlib import Path
+
+# Suite-wide QSettings isolation: the app's store is an explicit
+# XDG_CONFIG_HOME path (see settings_store), so a default here keeps
+# tests off the user's real config on macOS too, where Qt's native
+# format ignores XDG. Tests that need their own store override it.
+os.environ.setdefault(
+    "XDG_CONFIG_HOME", tempfile.mkdtemp(prefix="podracer-tests-")
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 for src in (ROOT / "src", ROOT / "packages" / "podracer_db" / "src"):
