@@ -28,4 +28,9 @@ include = ["podracer"]
 # The wheel must carry the bundled fonts/icons or a pip-installed app
 # silently runs without them (onefile bundles via --add-data instead).
 [tool.setuptools.package-data]
-podracer = ["fonts/*.ttf", "fonts/LICENSE-*.txt", "assets/*.png", "assets/icons/*"]
+podracer = ["fonts/*.ttf", "fonts/LICENSE-*.txt", "assets/*.png", "assets/*.icns", "assets/icons/*"]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.22.3",
+]

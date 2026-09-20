@@ -1747,6 +1747,36 @@ def windows_95() -> Theme:
     )
 
 
+def workplace_violet() -> Theme:
+    """Workplace Violet: the colorhunt palette, flat and light.
+
+    Palette as given (#eeeeee, #d8cbbb, #bb8fa9, #560764). The taupe
+    is the flat workspace backdrop, the light gray the panels; the
+    deep violet carries accent and header (white text 13:1). The mauve
+    is too light for placeholder text on #eeeeee (2.4:1), so accent2
+    is the same mauve hue with the lightness dropped 0.65 to 0.42,
+    5.3:1 on the panel, per the 2026-08-19 accent2 rule.
+    """
+    return Theme(
+        name="Workplace Violet",
+        colors={"gray": "#eeeeee", "taupe": "#d8cbbb",
+                "mauve": "#bb8fa9", "violet": "#560764"},
+        window_gradient=("#d8cbbb", "#d8cbbb"),   # flat taupe workspace
+        accent="#560764",               # deep violet: white text clears AA
+        accent2="#855170",              # mauve darkened for placeholder
+        panel_bg="#eeeeee",
+        panel_text="#1a1a1a",
+        text_on_accent="#ffffff",
+        status_bg="rgba(0, 0, 0, 0.08)",
+        status_text="#1a1a1a",
+        header_gradient=("#560764", "#560764"),   # flat violet
+        header_text="#ffffff",
+        button_to="#560764",            # same as accent: flat button
+        category="Flat",
+        button_radius=0,
+    )
+
+
 def naan_binary() -> Theme:
     """Naan Binary: the non-binary flag, dark.
 
@@ -2275,6 +2305,7 @@ THEMES: list[Theme] = [
     hip_to_be_square(),
     tokyo_night_2d(),
     windows_95(),
+    workplace_violet(),
 ]
 
 
